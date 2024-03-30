@@ -1,0 +1,16 @@
+--* epoch_stats_long:
+--*   desc: Generate metadata about each patient epoch.
+--*   ext: sql
+--*   inputs:
+--*   - condition_era_with_epochs
+--* 
+
+SELECT 
+    person_id,
+    epoch,
+    min(greatest(condition_era_start_date, epoch_start)) as first_date,
+    max(least(condition_era_end_date, epoch_end)) as last_date,
+    count(*) as num_condition_eras,
+    datediff(max(least(condition_era_end_date, epoch_end)),min(greatest(condition_era_start_date, epoch_start))) + 1 as epoch_effective_days
+FROM condition_era_with_epochs
+GROUP BY epoch, person_id

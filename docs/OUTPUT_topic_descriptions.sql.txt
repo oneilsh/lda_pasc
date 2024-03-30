@@ -1,0 +1,88 @@
+--* OUTPUT_topic_descriptions:
+--*   desc: Join nicer topic names to the topic descriptions. Additionally compute relevance
+--*     metric for each term/topic pair and join in concept metadata.
+--*   ext: sql
+--*   inputs:
+--*   - INPUT_persons_datapartners_concepts
+--*   - concept_lda_pin
+--*   - topic_description_decoded_unzipped
+--* 
+
+WITH topic_info AS (
+    --- 3: from the join, pick these cols
+    SELECT topic_table.topic_index, 
+           topic_table.topic_name, 
+           topic_table.term_weight,
+           topic_table.concept_id,
+           concept_lda_pin.concept_name, 
+           concept_lda_pin.domain_id, 
+           concept_lda_pin.concept_class_id, 
+           concept_lda_pin.vocabulary_id
+    FROM
+    -- 1: unpack the input structs containing term weights and concept_ids
+    (SELECT topic_index, topic_name,
+        topicInfoStructs.termWeights AS term_weight,
+        int(topicInfoStructs.termTerms) AS concept_id
+    FROM topic_description_decoded_unzipped) AS topic_table
+    -- 2: then join it on the concept_lda_pin table to get metadata
+    LEFT JOIN concept_lda_pin ON topic_table.concept_id = concept_lda_pin.concept_id
+), 
+
+concept_global_prob AS (
+        SELECT 
+          group_counts.concept_id,
+          -- 6: divide the concept_id counts by the total number of concepts to compute the percentage of data points that are that concept_lda_pin
+          --   (its global probability)
+          group_counts.count_concept_id / 
+            (
+                -- 4: compute the total number of rows and add it as a constant colum for later math
+                SELECT count(*) FROM INPUT_persons_datapartners_concepts
+            ) as concept_global_prob
+        FROM (
+          -- 5: count input concept_ids
+          SELECT concept_id, count(*) as count_concept_id
+          FROM INPUT_persons_datapartners_concepts
+          GROUP BY concept_id) as group_counts
+    ) 
+
+-- 11: finally, we can compute topic relevance for the term within the topic, as a linear combination
+--     (weighted by a gamma parameter) between basic term weight in the topic (but log'd) and 
+--     the log of the probability of the term in the topic over the global probability of the term (aka lift)
+-- 12: whew!
+SELECT /*+ COALESCE(1) */ topic_index, 
+       topic_name, 
+       term_weight, 
+       term_weight / term_sum_weight as term_weight_relative,
+       0 * log2(term_weight) + (1.0 - 0) * log2(term_weight/concept_global_prob) as relevance,
+       concept_id, 
+       concept_name, 
+       domain_id, 
+       concept_class_id, 
+       vocabulary_id
+FROM (
+    -- 10: from those keep the basic info about concepts for each topic, 
+    --     as well as the sum of term weights across topics (same in multiple rows with the same concept_id)
+    --     and the global probability of the concept_id (same in multiple rows with the same concept_id)
+    SELECT topic_info.topic_index, 
+           topic_info.topic_name,
+           topic_info.term_weight,
+           topic_info.concept_name, 
+           topic_info.concept_id, 
+           topic_info.domain_id, 
+           topic_info.concept_class_id, 
+           topic_info.vocabulary_id, 
+           summed.term_sum_weight,
+           concept_global_prob.concept_global_prob
+    -- 8: join it with topic_info which contains a bunch of other info per topic and concept_id
+    FROM topic_info
+    JOIN (
+        -- 7: from topic_info, for each concept_id, sum the weights given to it across all topics 
+        --    (for use in later calculations of relevance)
+        SELECT 
+            concept_id, 
+            SUM(term_weight) AS term_sum_weight
+        FROM topic_info 
+        GROUP BY concept_id) AS summed
+    ON topic_info.concept_id = summed.concept_id 
+    -- 9: also join in the global probability for concepts
+    JOIN concept_global_prob ON topic_info.concept_id = concept_global_prob.concept_id)

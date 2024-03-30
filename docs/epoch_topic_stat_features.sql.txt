@@ -1,0 +1,97 @@
+--* epoch_topic_stat_features:
+--*   desc: Select patients to include for regression tests (in test set, have minimal
+--*     pre/post data existence, valid life stage and cohort, and complete demographic/health
+--*     data). Also filters out data from omicron patients.
+--*   ext: sql
+--*   inputs:
+--*   - OUTPUT_person_topic_assignment_epochs
+--*   - filtered_dps
+--*   - person_all_facts
+--*   - epoch_stats_long
+--* 
+
+WITH person_epoch_facts AS (
+    SELECT 
+        epoch_stats_long.*,
+        Person_all_facts.data_partner_id,
+        Person_all_facts.cohort_simple,
+        Person_all_facts.age_at_index,
+        Person_all_facts.life_stage_simple,     
+        Person_all_facts.index_wave,
+        Person_all_facts.cci_score_quan,
+        Person_all_facts.gender,
+        Person_all_facts.race,
+        Person_all_facts.ethnicity,
+        Person_all_facts.cdm_name,
+        Person_all_facts.total_history_conditions,
+        Person_all_facts.BMI_max_observed_or_calculated as bmi
+    FROM epoch_stats_long
+    INNER JOIN Person_all_facts ON Person_all_facts.person_id = epoch_stats_long.person_id
+    -- only interested in those in the validate set
+    --WHERE Person_all_facts.set IN ('validate', 'train')
+    WHERE Person_all_facts.set IN ('test')
+        -- and we only want pre/post epoch analysis for now to make the stats easier
+        AND epoch_stats_long.epoch != 'acute'
+
+        AND Person_all_facts.cohort_simple IS NOT NULL 
+        AND Person_all_facts.age_at_index IS NOT NULL 
+        AND Person_all_facts.BMI_max_observed_or_calculated IS NOT NULL
+        AND Person_all_facts.pre_num_condition_eras IS NOT NULL
+        AND Person_all_facts.post_num_condition_eras IS NOT NULL
+        AND Person_all_facts.pre_epoch_effective_days >= 14
+        AND Person_all_facts.post_epoch_effective_days >= 14
+),
+
+stat_features AS (
+    SELECT
+        person_epoch_facts.*,
+        OUTPUT_person_topic_assignment_epochs.topic_name,
+        OUTPUT_person_topic_assignment_epochs.topic_prob
+    FROM person_epoch_facts
+    INNER JOIN OUTPUT_person_topic_assignment_epochs ON 
+        person_epoch_facts.person_id = OUTPUT_person_topic_assignment_epochs.person_id AND
+        person_epoch_facts.epoch = OUTPUT_person_topic_assignment_epochs.epoch
+),
+
+complete_cases as (
+    SELECT /*+ REPARTITION(topic_name) */
+        stat_features.*
+    FROM stat_features
+    WHERE
+        stat_features.epoch IS NOT NULL 
+        AND stat_features.first_date IS NOT NULL
+        AND stat_features.last_date IS NOT NULL
+        AND stat_features.num_condition_eras IS NOT NULL
+        AND stat_features.epoch_effective_days IS NOT NULL
+        AND stat_features.cohort_simple IS NOT NULL
+        AND stat_features.age_at_index IS NOT NULL
+        AND stat_features.life_stage_simple IS NOT NULL
+        AND stat_features.cci_score_quan IS NOT NULL
+        AND stat_features.index_wave IS NOT NULL
+        AND stat_features.gender IS NOT NULL
+        AND stat_features.race IS NOT NULL
+        AND stat_features.ethnicity IS NOT NULL
+        AND stat_features.bmi IS NOT NULL
+        AND stat_features.topic_prob IS NOT NULL
+    ORDER BY stat_features.topic_name
+),
+
+filtered_persons as (
+    SELECT 
+        complete_cases.*
+    FROM complete_cases
+    -- no omicron, not enough patients in some cohorts
+    WHERE complete_cases.index_wave != 'omicron' 
+    ORDER BY topic_name
+),
+
+select_dps as (
+    SELECT data_partner_id 
+    FROM filtered_dps 
+    WHERE filtered_dps.count_u09 > 0
+)
+
+SELECT /*+ REPARTITION(topic_name) */
+    filtered_persons.*
+FROM filtered_persons 
+INNER JOIN select_dps ON filtered_persons.data_partner_id = select_dps.data_partner_id

@@ -1,0 +1,41 @@
+--* last_reasonable_date:
+--*   desc: Computes a last reasonable date for a given data partner, with some logic
+--*     for strange cases. See comments.
+--*   ext: sql
+--*   inputs:
+--*   - manifest_lda_pin
+--*   - person_table_sets
+--* 
+
+-- this computes a "last reasonable date" for a given data partner, with some logic for weird cases
+-- for most data partners it is the last_run_date
+-- for those who don't list a last_run_date, we generously use the latest ran_run_date across all data partners
+-- for those who date shift, we extract the potential shift number of days with some regex (first set of consecutive digits),
+--   and use their last_run_date plus this potential shift date, ensuring it is after the last potentially-maximally-shifted date
+
+SELECT 
+  person_table_sets.person_id, 
+  person_table_sets.data_partner_id,
+  CASE
+    WHEN run_date IS NULL 
+    THEN
+        -- if we don't know their most recent run date, I guess we'll assume they are as up to date as the best? 
+        -- (doesn't seem likely, but I don't want to say their data are questionable downstream unless it's *newer* than the best)
+        max(run_date) OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
+    WHEN shift_date_yn = 'Y'
+    THEN
+        -- if the site shifts their date, let's assume a max allowable date of the run date plus the absolute value of the amount of possible shift
+        -- regex for sites with stuff like '+/- 3', ugh
+        -- some sites also specify e.g. -7, not sure what to make of that... let's use the absolute value to be safe
+        -- and what about things that don't parse to an int? (e.g. UNKNOWN) We'll assume 0 in those cases (no shift)
+        date_add(run_date, 
+                 ifnull(
+                     abs(int(regexp_extract(max_num_shift_days, '(\\d+)', 1))),
+                     0
+                 ))
+    ELSE
+        -- otherwise we can just use the run date
+        run_date
+  END as last_reasonable_date
+FROM manifest_lda_pin
+INNER JOIN person_table_sets ON person_table_sets.data_partner_id = manifest_lda_pin.data_partner_id

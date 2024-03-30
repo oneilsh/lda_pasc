@@ -1,0 +1,10 @@
+--* covid_tests:
+--*   desc: Identifies PCR and Ag-positive test concepts. Original code by Emily Pfaff.
+--*   ext: sql
+--*   inputs:
+--*   - concept_lda_pin
+--*   - concept_set_members_lda_pin
+--* 
+
+SELECT cm.*
+FROM concept_lda_pin cl JOIN concept_set_members_lda_pin cm ON cl.concept_id = cm.concept_id and cm.concept_set_name = 'ATLAS SARS-CoV-2 rt-PCR and AG' and cm.is_most_recent_version = true

@@ -1,0 +1,27 @@
+--* first_longcovid_clinic_visit:
+--*   desc: Identifies the date of the first long covid clinic visit.
+--*   ext: sql
+--*   inputs:
+--*   - concept_set_members_lda_pin
+--*   - codeset_ids
+--*   - observation_lda_pin
+--* 
+
+-- first, we extract the concept set by short name to codeset_id table
+-- then we inner-join in the data table, keeping the minimum date by person_id
+
+WITH concept_ids AS (
+    SELECT concept_set_members_lda_pin.concept_id 
+    FROM concept_set_members_lda_pin
+    INNER JOIN codeset_ids ON concept_set_members_lda_pin.codeset_id = codeset_ids.codeset_id
+    WHERE codeset_ids.concept_set_name = 'longcovid_clinic_visits'
+)
+
+SELECT /*+ BROADCAST(concept_ids) */ observation_lda_pin.person_id, 
+CASE
+    WHEN min(observation_lda_pin.observation_date) > date('9999-12-31') THEN date('9999-12-31')
+    ELSE min(observation_lda_pin.observation_date)
+END as first_longcovid_clinic_visit
+FROM observation_lda_pin 
+INNER JOIN concept_ids ON concept_ids.concept_id = observation_lda_pin.observation_concept_id
+GROUP BY person_id

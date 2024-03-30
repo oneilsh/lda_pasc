@@ -1,0 +1,28 @@
+--* topic_names:
+--*   desc: Create basic topic names by computing for each topic the percent usage by
+--*     probability mass in the data (training and validation).
+--*   ext: sql
+--*   inputs:
+--*   - person_topics_arrayify_long
+--* 
+
+-- for each topic, compute the total probability mass
+-- assigned to it
+WITH topic_usage AS (
+    SELECT topic_index, sum(topic_prob) as topic_usage_relative
+    FROM person_topics_arrayify_long
+    GROUP BY topic_index)
+
+-- use the generated order and normalize probability
+-- to create a topic name
+SELECT topic_index, topic_usage_percent, concat('T-', topic_order, ' (', round(100.0 * topic_usage_percent, 1), '%)') as topic_name
+FROM (
+    -- normalize the probability masses across topics to 1.0
+    --   using window function, OVER () aggregates goes over 
+    --   all rows
+    -- and also order the topics so we can rename 
+    -- them by order
+    SELECT topic_index, 
+           topic_usage_relative / sum(topic_usage_relative) OVER () as topic_usage_percent,
+           row_number() OVER (ORDER BY topic_usage_relative DESC) as topic_order
+    FROM topic_usage)

@@ -1,0 +1,76 @@
+--* group_topic_stats:
+--*   desc: Compute per-topic, per-analysis group statistics of topic probability.
+--*   ext: sql
+--*   inputs:
+--*   - epoch_topic_stat_features
+--* 
+
+WITH gender_groups AS (
+    SELECT
+        topic_name,
+        cohort_simple,
+        gender as group,
+        'gender' as grouper,
+        AVG(topic_prob) as mean_topic_prob,
+        kurtosis(topic_prob) as kurtosis_topic_prob,
+        variance(topic_prob) as var_topic_prob,
+        count(person_id) as count_patients
+    FROM epoch_topic_stat_features
+    WHERE epoch = 'post'
+    GROUP BY 
+        topic_name, 
+        cohort_simple, 
+        --life_stage_simple, 
+        gender
+        --index_wave
+),
+
+life_stage_simple_groups AS (
+    SELECT
+        topic_name,
+        cohort_simple,
+        life_stage_simple as group,
+        'life_stage_simple' as grouper,
+        AVG(topic_prob) as mean_topic_prob,
+        kurtosis(topic_prob) as kurtosis_topic_prob,
+        variance(topic_prob) as var_topic_prob,
+        count(person_id) as count_patients
+    FROM epoch_topic_stat_features
+    WHERE epoch = 'post'
+    GROUP BY 
+        topic_name, 
+        cohort_simple, 
+        life_stage_simple 
+        --gender
+        --index_wave
+),
+
+index_wave_groups AS (
+    SELECT
+        topic_name,
+        cohort_simple,
+        index_wave as group,
+        'index_wave' as grouper,
+        AVG(topic_prob) as mean_topic_prob,
+        kurtosis(topic_prob) as kurtosis_topic_prob,
+        variance(topic_prob) as var_topic_prob,
+        count(person_id) as count_patients
+    FROM epoch_topic_stat_features
+    WHERE epoch = 'post'
+    GROUP BY 
+        topic_name, 
+        cohort_simple, 
+        --life_stage_simple, 
+        --gender
+        index_wave
+)
+
+SELECT * FROM gender_groups
+
+UNION ALL
+
+SELECT * FROM life_stage_simple_groups
+
+UNION ALL
+
+SELECT * FROM index_wave_groups

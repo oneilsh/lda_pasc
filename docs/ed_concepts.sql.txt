@@ -1,0 +1,10 @@
+--* ed_concepts:
+--*   desc: Identifies Emergency Department visit concepts. Original code by Emily Pfaff.
+--*   ext: sql
+--*   inputs:
+--*   - concept_set_members_lda_pin
+--* 
+
+SELECT cm.*
+FROM concept_set_members_lda_pin cm 
+WHERE concept_set_name = '[PASC] ED Visits' and is_most_recent_version = true

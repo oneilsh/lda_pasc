@@ -1,0 +1,40 @@
+--* dev_filter_patients_for_2x2:
+--*   desc: Select patients to include for 2x2 tests (in test set, have minimal pre/post
+--*     data existence, valid life stage and cohort).
+--*   ext: sql
+--*   inputs:
+--*   - OUTPUT_person_topic_assignment_epochs
+--*   - filtered_dps
+--*   - person_all_facts
+--*   - epoch_stats_long
+--* 
+
+WITH filtered_persons as (
+    SELECT
+        Person_all_facts.person_id,
+        Person_all_facts.data_partner_id,
+        Person_all_facts.cohort_simple,
+        Person_all_facts.life_stage_simple,
+        Person_all_facts.cohort,
+        Person_all_facts.life_stage
+    FROM Person_all_facts
+    WHERE 
+        Person_all_facts.set IN ('test')
+        AND Person_all_facts.cohort_simple IS NOT NULL 
+        AND Person_all_facts.life_stage_simple IS NOT NULL 
+        AND Person_all_facts.pre_num_condition_eras IS NOT NULL
+        AND Person_all_facts.post_num_condition_eras IS NOT NULL
+        AND Person_all_facts.pre_epoch_effective_days >= 14
+        AND Person_all_facts.post_epoch_effective_days >= 14
+),
+
+select_dps as (
+    SELECT data_partner_id 
+    FROM filtered_dps 
+    WHERE filtered_dps.count_u09 > 0
+)
+
+SELECT 
+    filtered_persons.*
+FROM filtered_persons 
+INNER JOIN select_dps ON filtered_persons.data_partner_id = select_dps.data_partner_id

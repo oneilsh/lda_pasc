@@ -1,0 +1,269 @@
+#* better_fisher_tests:
+#*   desc: "Runs a 2x2 (two sided fishers with simulate.p.value = T) for each concept,\
+#*     \ \nwith patient counts summed across life stages, evaluating new onset rates\
+#*     \ in each test cohort\n(covid-no-pasc and pasc) against controls. \n"
+#*   ext: R
+#*   inputs:
+#*   - concept_pre_post_patients
+#* 
+
+library(dplyr)
+library(tidyr)
+
+better_fisher_tests <- function(concept_pre_post_patients) {
+    # compute sums across life stages
+    concept_pre_post_patients <- concept_pre_post_patients %>% 
+                                    select(-life_stage_simple) %>%
+                                    group_by(cohort_simple, concept_id, concept_name, pre, post) %>%
+                                    summarize(num_patients = sum(num_patients)) %>%
+                                    as.data.frame()
+
+    # split out the control cohort from the two case cohorts (covid-no-pasc and pasc)
+    # we'll group_by case in the cases, and for each group pull in the controls from the outer scope to do the test in do_test
+    # (it'll also be grouped by concept_id since were doing the test per-concept)
+    controls <- concept_pre_post_patients %>% filter(cohort_simple == "control")
+    cases <- concept_pre_post_patients %>% filter(cohort_simple != "control")
+
+    do_test <- function(sub_df) {
+        cat("Running test for ", head(sub_df, n = 1) %>% as.character(), "\n")
+
+        # which concept_id are we talking about?       
+        test_concept_id <- sub_df$concept_id[1]
+        
+        # combine the control cohort and test cohort into one df, but only for the concept_id of interest
+        sub_df <- rbind(sub_df, controls %>% filter(concept_id == test_concept_id))
+        print(sub_df)                          
+
+        # compute the counts
+        control_nopre_nopost <- sub_df %>% filter(cohort_simple == "control" & pre == 0 & post == 0) %>% pull(num_patients)
+        control_nopre_yespost <- sub_df %>% filter(cohort_simple == "control" & pre == 0 & post == 1) %>% pull(num_patients)
+        test_nopre_nopost <- sub_df %>% filter(cohort_simple != "control" & pre == 0 & post == 0) %>% pull(num_patients)
+        test_nopre_yespost <- sub_df %>% filter(cohort_simple != "control" & pre == 0 & post == 1) %>% pull(num_patients)
+
+        # in cases where there were no patients with a given concept, there may not be any count data (ie, there are no rows with num_patients == 0 
+        # in the input, even though there are combinations with 0s). So mark it zero. MARK IT ZERO!
+        if(length(control_nopre_nopost) == 0) {control_nopre_nopost = 0}
+        if(length(control_nopre_yespost) == 0) {control_nopre_yespost = 0}
+        if(length(test_nopre_nopost) == 0) {test_nopre_nopost = 0}
+        if(length(test_nopre_yespost) == 0) {test_nopre_yespost = 0}
+
+        # build the count matrix
+        mat <- matrix(c(control_nopre_nopost, 
+                        test_nopre_nopost, 
+                        control_nopre_yespost, 
+                        test_nopre_yespost), 
+                    nrow = 2)
+        print(mat)
+
+        colnames(mat) <- c("no_post", "yes_post")
+        rownames(mat) <- c("control", "test")
+        
+        # run the test
+        # https://stats.stackexchange.com/questions/162718/problems-with-sample-size-in-fishers-exact-test
+        res <- fisher.test(mat, alternative = "two.sided", simulate.p.value = TRUE)
+
+        # extract results and return
+        pval <- res$p.value
+        conf_int_lower <- res$conf.int[1]
+        conf_int_upper <- res$conf.int[2]
+        estimate <- res$estimate
+
+        ret_df <- data.frame(pval, 
+                            estimate, 
+                            conf_int_lower, 
+                            conf_int_upper,
+                            control_nopre_nopost, 
+                            test_nopre_nopost, 
+                            control_nopre_yespost, 
+                            test_nopre_yespost)
+
+        return(ret_df)
+    }
+
+    # here's where we group the cases
+    cases_grouped <- cases %>% 
+                group_by(cohort_simple, 
+                         concept_id, 
+                         concept_name)
+    # and call the test function for each group
+    results <- do(cases_grouped, do_test(.)) %>%
+        as.data.frame() %>%
+        mutate(pval_adj = p.adjust(pval, method = "bonferroni")) %>%
+        mutate(pval_sig = pval_adj < 0.05)
+        #filter(pval_adj < 0.05)
+
+    return(results)
+}
+
+# this is old code, not meant to be run, but includes some ggplot
+# setup that I don't want to lose til I implement it in this branch
+old_code <- function() {
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(stringr)
+library(RColorBrewer)
+
+top_concepts_testsA <- function(topic_top_concept_counts_groups) {
+    df <- topic_top_concept_counts_groups
+
+    df_pasc <- df %>%
+       group_by(concept_id, concept_name, epoch, cohort_simple, life_stage) %>%
+       summarize(num_patients = sum(num_patients)) %>%
+       ungroup() %>%
+       filter(cohort_simple %in% c("control", "pasc")) %>%
+       mutate(cohort_simple = factor(cohort_simple, 
+                                     levels = c("control", "pasc"), 
+                                     labels = c("control", "test"))) %>%
+       pivot_wider(names_from = c("cohort_simple", "epoch"), 
+                   values_from = "num_patients") %>%
+       mutate(test_cohort = "pasc")
+
+    df_covid <- df %>%
+       group_by(concept_id, concept_name, epoch, cohort_simple, life_stage) %>%
+       summarize(num_patients = sum(num_patients)) %>%
+       ungroup() %>%
+       filter(cohort_simple %in% c("control", "covid-no-pasc")) %>%
+       mutate(cohort_simple = factor(cohort_simple, 
+                                     levels = c("control", "covid-no-pasc"), 
+                                     labels = c("control", "test"))) %>%
+       pivot_wider(names_from = c("cohort_simple", "epoch"), 
+                   values_from = "num_patients") %>%
+       mutate(test_cohort = "covid-no-pasc")
+
+    # put 
+    counts <- rbind(df_pasc, df_covid) %>%
+              as.data.frame()
+
+    # NA's should be 0s
+    counts[is.na(counts)] <- 0
+
+    counts <- counts %>%
+        # we need at least 20 in one of the groups
+        filter(!(control_post < 20 & control_pre < 20 & test_post < 20 & test_pre < 20))
+
+    counts <- rowwise(counts)
+    res <- do(counts, run_test(.))
+
+    ret_df <- cbind(counts, res) %>%
+        mutate(pval_adj = p.adjust(pval, method = "holm")) %>%
+        filter(pval_adj < 0.05) %>%
+        mutate(life_stage = factor(life_stage, 
+                                   levels = c("pediatric", "adolescent", "adult", "senior"),
+                                   labels = c("Pediatric", "Adolescent", "Adult", "Senior"))) %>%
+        mutate(test_cohort = factor(test_cohort, 
+                                    levels = c("covid-no-pasc", "pasc"),
+                                    labels = c("COVID No PASC", "PASC")))
+
+    # print the incoming concept names as code for manual curation via copy/paste
+    ret_df$concept_name %>% unique() %>% dput()
+
+    # this is a lot of hand data entry... we'll unzip after for concept/category
+    concepts_categories <- c(
+                  "Cough",      "Respiratory",         # resp
+                  "Dyspnea",    "Respiratory",      # resp
+                  "Wheezing",   "Respiratory",      # resp
+                  "Hypoxemia",  "Respiratory",             # resp
+                  "Chronic cough",                        "Respiratory",          # resp
+                  "Acute respiratory distress syndrome",  "Respiratory", # resp
+                  "Abnormal breathing",                   "Respiratory", # resp
+                  "Dependence on supplemental oxygen",    "Respiratory", # resp
+                  "Disorder of respiratory system",       "Respiratory", # resp
+                  "Acute conjunctivitis",      "Infection",        # infection
+                  "Conjunctivitis",            "Infection",     # infection
+                  "Viral disease in mother complicating pregnancy, childbirth AND/OR puerperium",    "Infection",# infection
+                  "Pneumonia",                        "Infection", # infection
+                  "Viral pneumonia",                  "Infection", # infection
+                  "Pneumonia caused by SARS-CoV-2",   "Infection", # infection
+                  "Acute lower respiratory tract infection",            "Infection",# infection
+                  "Upper respiratory tract infection due to Influenza",  "Infection",# infection
+                  "Chest pain",      "Cardiac", # cardiac
+                  "Palpitations",    "Cardiac", # cardiac
+                  "Tachycardia",     "Cardiac",         # cardiac
+                  "Cardiomegaly",    "Cardiac", # cardiac
+                  "Myocarditis due to infectious agent",   "Cardiac",  # cardiac
+                  "Disorder of lung",                                  "Pulmonary", # lung
+                  "Abnormal findings on diagnostic imaging of lung",   "Pulmonary", # lung
+                  "Pneumothorax",       "Pulmonary",# lung
+                  "Fibrosis of lung",   "Pulmonary", # lung
+                  "Single live birth",  "Pediatric",             # pediatric
+                  "Diaper rash",        "Pediatric",    # pediatric
+                  "Fussy infant",       "Pediatric",                     # pediatric
+                  "Headache",                             "Neurocognitive", # neuro
+                  "Dizziness and giddiness",              "Neurocognitive", # neuro
+                  "Finding related to attentiveness",     "Neurocognitive", # neuro
+                  "Cognitive communication disorder",     "Neurocognitive", # neuro
+                  "Sensory disorder of smell and/or taste",  "Neurocognitive", # neuro
+                  "Chronic fatigue syndrome", "Other", # other
+                  "Fatigue",                  "Other", # other
+                  "Malaise",                  "Other", # other
+                  "Asthenia",                 "Other", # other
+                  "Sleep disorder",           "Other", # other
+                  "Hyperosmolality and or hypernatremia",  "Other",          # other
+                  "Telogen effluvium",           "Other",# other
+                  "Non-scarring alopecia",       "Other",    # other
+                  "Imaging result abnormal",     "Other",    # other
+                  "Disorder due to infection",   "Other"   # other
+                  )
+
+    concept_name_vec <- concepts_categories[(1:length(concepts_categories)) %% 2 == 1]
+    concept_category_vec <- concepts_categories[(1:length(concepts_categories)) %% 2 == 0]
+
+    # we gotta do this before we cut ret_df down by merging with concept_df, to be used in the plot below for same scale
+    fill_breaks <- seq(min(ret_df$estimate), max(ret_df$estimate), length.out = 5) %>% round(2)
+
+    concepts_df <- data.frame(concept_name = concept_name_vec, concept_category = concept_category_vec, stringsAsFactors = FALSE) %>%
+        filter(concept_category %in% c("Respiratory", "Infection", "Pulmonary"))
+
+    ret_df <- ret_df %>%
+        merge(concepts_df, by = "concept_name") %>%
+        mutate(concept_name = factor(concept_name, 
+                                     levels = concepts_df$concept_name,
+                                     labels = str_wrap(concepts_df$concept_name, 40)))
+
+    palette <- brewer.pal(n = length(unique(concept_category_vec)), "Dark2")
+    concepts_df <- concepts_df %>%
+         #make this a factor with level ordering as specified above
+        mutate(concept_category = factor(concept_category, 
+                                         # unique will keep the relative ordering by first occurrance
+                                         levels = unique(concepts_df$concept_category))) %>%
+        # this tricky business uses the fact that factors are integers under the hood, so we're indexing into the 
+        # palette with these underlying ints
+        mutate(category_color = palette[concept_category])
+
+    p <- ggplot(ret_df) +
+        geom_tile(aes(y = concept_name, x = life_stage, fill = estimate)) +
+        facet_grid(. ~ test_cohort) +
+        coord_equal() +
+        scale_y_discrete(name = "Concept") +
+        scale_x_discrete(name = "Life Stage") +
+        scale_fill_viridis_c(name = "Odds Ratio\nEstimate", breaks = fill_breaks) +
+        theme_bw(14) + 
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+        theme(axis.text.y = element_text(color = concepts_df$category_color)) +
+        theme(legend.key.size = unit(0.5, 'cm')) +
+        expand_limits(fill = c(min(fill_breaks), max(fill_breaks)))
+
+    plot(p)
+
+    return(to_rdata(p))
+}
+
+# runs a chisq-test or fisher exact test on a single row
+run_test <- function(row_df) {
+    a <- row_df$control_pre
+    b <- row_df$control_post
+    c <- row_df$test_pre 
+    d <- row_df$test_post
+
+    res <- fisher.test(matrix(c(a, b, c, d), nrow = 2), alternative = "greater")
+    pval <- res$p.value
+    conf_int_lower <- res$conf.int[1]
+    conf_int_upper <- res$conf.int[2]
+    estimate <- res$estimate
+
+    ret_df <- data.frame(pval, conf_int_lower, conf_int_upper, estimate)
+    return(ret_df)
+}
+
+}

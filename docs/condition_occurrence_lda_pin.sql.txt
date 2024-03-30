@@ -1,0 +1,11 @@
+--* condition_occurrence_lda_pin:
+--*   desc: Filters OMOP condition_occurrence table by kept sites.
+--*   ext: sql
+--*   inputs:
+--*   - condition_occurrence
+--*   - keep_sites
+--* 
+
+SELECT condition_occurrence.*
+FROM condition_occurrence
+INNER JOIN keep_sites ON keep_sites.data_partner_id = condition_occurrence.data_partner_id

@@ -1,0 +1,13 @@
+--* topic_weight_totals:
+--*   desc: For each topic and data partner ID, compute the total assigned weight across
+--*     patients (training and validation).
+--*   ext: sql
+--*   inputs:
+--*   - OUTPUT_person_topic_assignment
+--* 
+
+SELECT * from (
+    SELECT topic_index, topic_name, data_partner_id, sum(topic_prob) as topic_sum_weight
+    FROM OUTPUT_person_topic_assignment
+    GROUP BY topic_index, topic_name, data_partner_id) 
+ORDER BY topic_sum_weight DESC

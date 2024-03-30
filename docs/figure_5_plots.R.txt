@@ -1,0 +1,109 @@
+#* figure_5_plots:
+#*   desc: Select forest plots.
+#*   ext: R
+#*   inputs:
+#*   - model_tests_covid_pvals
+#* 
+
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(scales)
+
+figure_5_plots <- function(model_tests_covid_pvals) {
+    df <- model_tests_covid_pvals
+
+    plot_df <- df %>%
+    #filter(!str_detect(contrast, 'Overall')) %>%
+	# sigh - rename contrasts not matching the pattern
+	mutate(contrast = ifelse(contrast == "Migration: Female COVID+ / Control",
+													 "Migration: COVID+ Female / Control Female",
+													 contrast
+	)) %>%
+	mutate(contrast = ifelse(contrast == "Migration: Male COVID+ / Control",
+													 "Migration: COVID+ Male / Control Male",
+													 contrast
+	)) %>%
+	mutate(contrast = ifelse(contrast == "Migration: Female PASC+ / Control",
+													 "Migration: PASC+ Female / Control Female",
+													 contrast
+	)) %>%
+	mutate(contrast = ifelse(contrast == "Migration: Male PASC+ / Control",
+													 "Migration: PASC+ Male / Control Male",
+													 contrast
+	)) %>%
+	# we gotta format this so the extraction below will work with the same logic to keep these in the result
+	mutate(contrast = ifelse(str_detect(contrast, "Overall"),
+													 contrast %>% 
+													 	 str_replace("Overall:", "Migration:") %>% 
+													 	 str_replace(" / ", "/") %>% 
+													 	 str_replace("$", " NA NA"),
+													 contrast
+	)) %>%
+	extract(contrast, into = c("cohort", "demo"), regex = "Migration: (.+?) (.+?) .+", remove = FALSE) %>%
+	mutate(demo = case_when(demo == "Ped." ~ "Pediatric",
+													 demo == "Adol." ~ "Adolescent",
+													 TRUE ~ demo)) %>%
+	mutate(demo = factor(demo, levels = c("Female",
+                                            "Male",
+                                            "Pediatric",
+                                            "Adolescent",
+                                            "Adult",
+                                            "Senior",
+                                            "Early",
+                                            "Alpha",
+                                            "Delta") %>% rev())) %>%
+	select(-contrast, -p_adj_small) %>%
+	mutate(estimate_odds_ratio = exp(estimate), confint_95_lower = exp(asymp_LCL), confint_95_upper = exp(asymp_UCL), demographic = demo) %>%
+	select(topic_name, cohort, demographic, group, estimate_odds_ratio, p_adj, confint_95_lower, confint_95_upper) %>% 
+	#filter(p_adj < 0.05) %>%
+    filter(grepl("Contrast", group)) %>%
+    mutate(cohort = factor(cohort, levels = c("PASC+", "COVID+", "Control"), ordered = TRUE))
+
+    selected_topics <- plot_df %>%
+		filter(str_detect(topic_name, "(T-8 )|(T-36 )|(T-72 )|(T-77 )")) %>%
+        mutate(topic_name = factor(topic_name, levels = str_sort(unique(topic_name), numeric = TRUE), ordered = TRUE))
+
+    print(plot_df)
+	
+	p <- ggplot(selected_topics) +
+	    annotation_raster(alpha("black", 0.05), xmin = -Inf, xmax = Inf, ymin = 3.5, ymax = 7.5) +
+		geom_linerange(
+									 aes(y = demographic, 
+									 		x = estimate_odds_ratio, 
+									 		xmin = confint_95_lower, 
+									 		xmax = confint_95_upper, 
+									 		color = group,
+									 		alpha = p_adj < 0.05
+									 		#linetype = cohort
+									 ),
+                                     size = c(0.85)
+									 #position = position_jitter(w = 0, h = 0.5)
+		) +
+		geom_point(
+							 aes(y = demographic, 
+							 		x = estimate_odds_ratio, 
+							 		color = group,
+							 		alpha = p_adj < 0.05
+							 ),
+                             size = 1.75
+		) +
+		facet_grid(cohort ~ topic_name, scales ="free_x") +
+		geom_vline(xintercept = 1.0, color = "blue", alpha = 0.5, size = 0.6, linetype = "dashed") + 
+		scale_x_continuous(trans = "log10", name = "Odds Ratio Estimate", labels = label_number()) + 
+		scale_y_discrete(name = "") +
+		annotation_logticks(sides = "b") +
+		theme_bw(14) +
+		theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+		#theme(axis.text.y = element_text(size = 8)) +
+		theme(strip.text.x = element_text(size = 8)) +
+		theme(aspect.ratio = 0.75) +
+		scale_color_discrete(guide = "none") +
+		scale_alpha_discrete(range = c(0.3, 1))
+	
+	str(p)
+	plot(p)
+
+    return(NULL)
+}

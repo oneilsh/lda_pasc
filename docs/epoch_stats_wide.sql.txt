@@ -1,0 +1,41 @@
+--* epoch_stats_wide:
+--*   desc: Put the epoch metadata into a wide format with one row per patient and info
+--*     captured about pre, acute, and post epochs.
+--*   ext: sql
+--*   inputs:
+--*   - epoch_stats_long
+--* 
+
+WITH epoch_stats_wide AS (
+
+    SELECT * FROM (
+        SELECT 
+            person_id, 
+            first_date,
+            last_date,
+            int(num_condition_eras),
+            epoch_effective_days,
+            epoch
+        FROM epoch_stats_long
+    )
+    PIVOT (
+        min(first_date) first_date,
+        min(last_date) last_date,
+        min(num_condition_eras) num_condition_eras,
+        min(epoch_effective_days) epoch_effective_days
+        --min(epoch_cohort) epoch_cohort
+        FOR 
+        epoch IN ('pre' pre, 'acute' acute, 'post' post)
+    )
+
+)
+
+SELECT /*+ COALESCE(2) */
+    *,
+    least(epoch_stats_wide.pre_last_date, epoch_stats_wide.acute_first_date, epoch_stats_wide.post_first_date) AS index_date
+    -- this will be null if there's no pre or post epoch, which can happen if the first event is the index first_date,
+    -- which we *could* compute as 0.0, similarly there are some situations where it could be 1.0, but it's complicated
+    -- by whether there's an acute or not...
+    -- should we need this it could be computed more effectively further downstream against the min() and max() of conditions per patient
+    -- datediff(pre_last_date, pre_first_date) / (datediff(post_last_date, pre_first_date) + 1) as index_quantile
+FROM epoch_stats_wide

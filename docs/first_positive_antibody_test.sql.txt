@@ -1,0 +1,35 @@
+--* first_positive_antibody_test:
+--*   desc: Identifies the date of first positive antibody test (used only to help define
+--*     the control cohort)).
+--*   ext: sql
+--*   inputs:
+--*   - concept_set_members_lda_pin
+--*   - codeset_ids
+--*   - measurement_lda_pin
+--* 
+
+-- first, we extract the concept sets by short name to codeset_id table
+-- then we inner-join in the data table on the first concept set,
+-- then we inner join the result to the second, in the end keeping just the positive antibody tests
+
+WITH antibody_concept_ids AS (
+    SELECT concept_set_members_lda_pin.concept_id 
+    FROM concept_set_members_lda_pin
+    INNER JOIN codeset_ids ON concept_set_members_lda_pin.codeset_id = codeset_ids.codeset_id
+    WHERE codeset_ids.concept_set_name = 'antibody_tests'
+), result_pos AS (
+    SELECT concept_set_members_lda_pin.concept_id 
+    FROM concept_set_members_lda_pin
+    INNER JOIN codeset_ids ON concept_set_members_lda_pin.codeset_id = codeset_ids.codeset_id
+    WHERE codeset_ids.concept_set_name = 'resultpos'
+)
+
+SELECT /*+ BROADCAST(antibody_concept_ids, result_pos) */ Measurement_lda_pin.person_id, 
+CASE 
+  WHEN min(Measurement_lda_pin.measurement_date) > date('9999-12-31') THEN date('9999-12-31')
+  ELSE min(Measurement_lda_pin.measurement_date)
+END as first_positive_antibody_test
+FROM Measurement_lda_pin
+INNER JOIN antibody_concept_ids ON Measurement_lda_pin.measurement_concept_id = antibody_concept_ids.concept_id
+INNER JOIN result_pos ON Measurement_lda_pin.value_as_concept_id = result_pos.concept_id
+GROUP BY person_id

@@ -1,0 +1,29 @@
+#* datapartner_topic_usage_entropy:
+#*   desc: For each topic, computes the entropy of that topic from the distribution of
+#*     usage over sites, normalized to 1.0 being max entropy (uniform) and 0.0 being
+#*     min entropy (used only by one site).
+#*   ext: R
+#*   inputs:
+#*   - topic_weight_totals_nodps
+#* 
+
+# this is the entropy of usage across data partners
+# we normalize each topic to have a total sum weight of 1.0 and compute the entropy of that distribution
+library(dplyr)
+library(tidyr)
+
+datapartner_topic_usage_entropy <- function(topic_weight_totals_nodps) {
+    df <- topic_weight_totals_nodps
+
+    compute_entropy <- function(sub_df) {
+        p <- sub_df$topic_sum_weight / sum(sub_df$topic_sum_weight)
+
+        entropy <- -1 * sum(p * log2(p))
+        relative_entropy <- entropy / (-1 * log2(1/length(p))) # divide by max possible entropy
+        return(data.frame(entropy = entropy, relative_entropy = relative_entropy))
+    }
+
+    df_by_topic <- group_by(df, topic_name)
+    res <- do(df_by_topic, compute_entropy(.))
+    return(res)
+}

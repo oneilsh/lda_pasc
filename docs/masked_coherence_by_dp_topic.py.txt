@@ -1,0 +1,18 @@
+#* masked_coherence_by_dp_topic:
+#*   desc: Psuedorandomly mask site IDs in site topic coherence scores to match other
+#*     psuedorandom IDs.
+#*   ext: py
+#*   inputs:
+#*   - coherence_by_dp_topic
+#* 
+
+import pyspark.sql.functions as F
+from pyspark.sql.types import IntegerType,BooleanType,DateType,StringType
+
+def masked_coherence_by_dp_topic(coherence_by_dp_topic):
+    enabled = True
+    if enabled:
+        munged = coherence_by_dp_topic.withColumn('data_partner_id', F.sha2(F.concat(coherence_by_dp_topic.data_partner_id.cast(StringType()), F.lit('seed')), 256).substr(0, 3))
+        return munged
+    else:
+        return coherence_by_dp_topic

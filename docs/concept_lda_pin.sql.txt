@@ -1,0 +1,9 @@
+--* concept_lda_pin:
+--*   desc: OMOP concept table (pinned to version at data release).
+--*   ext: sql
+--*   inputs:
+--*   - concept
+--* 
+
+SELECT *
+FROM concept

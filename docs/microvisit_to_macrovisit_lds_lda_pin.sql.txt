@@ -1,0 +1,11 @@
+--* microvisit_to_macrovisit_lds_lda_pin:
+--*   desc: Filters macrovisit information by kept sites.
+--*   ext: sql
+--*   inputs:
+--*   - microvisit_to_macrovisit_lds
+--*   - keep_sites
+--* 
+
+SELECT microvisit_to_macrovisit_lds.*
+FROM microvisit_to_macrovisit_lds
+INNER JOIN keep_sites ON keep_sites.data_partner_id = microvisit_to_macrovisit_lds.data_partner_id

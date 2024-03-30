@@ -1,0 +1,10 @@
+--* charleson_scores_long_covid:
+--*   desc: Filters charleson score information by kept sites.
+--*   ext: sql
+--*   inputs:
+--*   - Fact_table_charlson_comorbidity_patient
+--*   - keep_sites
+--* 
+SELECT Fact_table_charlson_comorbidity_patient.*
+FROM Fact_table_charlson_comorbidity_patient
+INNER JOIN keep_sites ON keep_sites.data_partner_id = Fact_table_charlson_comorbidity_patient.data_partner_id

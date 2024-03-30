@@ -1,0 +1,18 @@
+#* masked_data_partner_cdms:
+#*   desc: Psuedorandomly mask site IDs in the manifest table to match other psuedorandom
+#*     IDs so we can associate their common data model info.
+#*   ext: py
+#*   inputs:
+#*   - manifest_lda_pin
+#* 
+
+import pyspark.sql.functions as F
+from pyspark.sql.types import IntegerType,BooleanType,DateType,StringType
+
+def masked_data_partner_cdms(manifest_lda_pin):
+    enabled = True
+    if enabled:
+        munged = manifest_lda_pin.withColumn('orig_data_partner_id', F.col('data_partner_id')).withColumn('data_partner_id', F.sha2(F.concat(manifest_lda_pin.data_partner_id.cast(StringType()), F.lit('seed')), 256).substr(0, 3)).select(F.col('orig_data_partner_id'), F.col('data_partner_id'), F.col('cdm_name'))
+        return munged
+    else:
+        return manifest_lda_pin

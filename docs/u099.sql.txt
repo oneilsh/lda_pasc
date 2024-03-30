@@ -1,0 +1,11 @@
+--* u099:
+--*   desc: Identifies the first date of a PASC diagnosis per patient.
+--*   ext: sql
+--*   inputs:
+--*   - condition_occurrence_lda_pin
+--* 
+
+SELECT co.person_id, min(co.condition_start_date) as u099_idx
+FROM condition_occurrence_lda_pin co 
+WHERE co.condition_concept_id IN (710706,705076) or co.condition_source_value LIKE '%U09.9%'
+GROUP BY co.person_id

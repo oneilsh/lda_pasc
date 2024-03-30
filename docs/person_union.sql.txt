@@ -1,0 +1,34 @@
+--* person_union:
+--*   desc: Aggregates all the different person_ids for whom we have some data on. Original
+--*     code by Emily Pfaff.
+--*   ext: sql
+--*   inputs:
+--*   - u07_ip_ed
+--*   - u07_any
+--*   - lab_pos
+--*   - mis_c
+--*   - u099
+--* 
+
+SELECT person_id
+FROM u07_ip_ed
+
+UNION
+
+SELECT person_id
+FROM lab_pos
+
+UNION
+
+SELECT person_id
+FROM u07_any
+
+UNION
+
+SELECT person_id
+FROM u099
+
+UNION
+
+SELECT person_id
+FROM mis_c

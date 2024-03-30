@@ -1,0 +1,26 @@
+#* covid_plot_5:
+#*   desc: Contrast plot.
+#*   ext: R
+#*   inputs:
+#*   - model_tests_covid_pvals
+#* 
+
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(stringr)
+
+covid_plot_5 <- function( model_tests_covid_pvals) {
+    df <- model_tests_covid_pvals
+
+    unique_topics <- df %>% 
+                       pull(topic_name) %>%
+                       unique() %>%
+                       str_sort(numeric = TRUE)
+
+    topics_subset <- unique_topics[42*4 + 1:42]
+    
+    p <- do_plot_clean(df, unique_topics, topics_subset, contrast_filter = "COVID+", title = "COVID+ / Control")
+
+    return(to_rdata(p))
+}

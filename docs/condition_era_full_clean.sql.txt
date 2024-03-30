@@ -1,0 +1,17 @@
+--* condition_era_full_clean:
+--*   desc: Drops condition eras matching the excluded concept_ids, and those with the
+--*     end date before the start date.
+--*   ext: sql
+--*   inputs:
+--*   - condition_era_lda_pin
+--*   - exclude_concepts
+--* 
+
+-- drop unwanted concepts, and any records where the end date is less than the start date 
+
+SELECT condition_era_lda_pin.* 
+FROM condition_era_lda_pin
+-- I think spark also supports LEFT ANTI JOIN...
+LEFT JOIN exclude_concepts ON exclude_concepts.concept_id = condition_era_lda_pin.condition_concept_id
+WHERE exclude_concepts.concept_id IS NULL
+AND condition_era_lda_pin.condition_era_end_date >= condition_era_lda_pin.condition_era_start_date

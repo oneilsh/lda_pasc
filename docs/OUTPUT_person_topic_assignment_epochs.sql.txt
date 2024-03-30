@@ -1,0 +1,28 @@
+--* OUTPUT_person_topic_assignment_epochs:
+--*   desc: Split person-epoch identifiers to person and epoch, pulling in cohort information
+--*     with it (for convenience IIRC) and giving proper topic names.
+--*   ext: sql
+--*   inputs:
+--*   - person_topics_arrayify_long_epochs
+--*   - all_person_facts_epoch_analysis
+--*   - topic_names
+--* 
+
+WITH topic_probs AS (
+    SELECT 
+        split(person_topics_arrayify_long_epochs.person_id, ':')[0] as person_id, 
+        split(person_topics_arrayify_long_epochs.person_id, ':')[1] as epoch, 
+        person_topics_arrayify_long_epochs.data_partner_id, 
+        person_topics_arrayify_long_epochs.topic_prob,
+        topic_names.topic_name
+    FROM person_topics_arrayify_long_epochs
+    JOIN topic_names ON
+    topic_names.topic_index = person_topics_arrayify_long_epochs.topic_index
+)
+
+SELECT /*+ COALESCE(12) */
+    topic_probs.*,
+    all_person_facts_epoch_analysis.cohort,
+    all_person_facts_epoch_analysis.cohort_simple
+FROM topic_probs
+INNER JOIN all_person_facts_epoch_analysis ON topic_probs.person_id = all_person_facts_epoch_analysis.person_id

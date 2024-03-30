@@ -1,0 +1,39 @@
+--* index_dates:
+--*   desc: Join all the various dates into a single table with a row per patient for
+--*     all patients.
+--*   ext: sql
+--*   inputs:
+--*   - first_longcovid_clinic_visit
+--*   - last_reasonable_date
+--*   - person_table_sets
+--*   - cohort_and_idx2
+--*   - first_positive_antibody_test
+--*   - longest_observation_periods
+--*   - first_b94_etc
+--* 
+
+-- join allll the tables
+-- left outer join starts with the first listed (person_table)
+-- and never removes ids, thus entries are added for
+-- every person_id, with nulls where no index date is defined
+
+SELECT 
+    person_table_sets.person_id,
+    cohort_and_idx2.pos_test_idx as first_positive_pcr_or_ag_test,
+    cohort_and_idx2.u07_ip_ed_idx as first_ip_ed_covid_diagnosis,
+    cohort_and_idx2.u07_any_idx as first_covid_diagnosis,
+    cohort_and_idx2.u099_idx as first_longcovid_diagnosis,  
+    cohort_and_idx2.m3581_idx as first_misc_diagnosis,
+    first_longcovid_clinic_visit.first_longcovid_clinic_visit,
+    first_positive_antibody_test.first_positive_antibody_test,
+    first_b94_etc.first_b94_etc,
+    last_reasonable_date.last_reasonable_date,
+    longest_observation_periods.observation_period_start_date,
+    longest_observation_periods.observation_period_end_date
+FROM person_table_sets
+LEFT OUTER JOIN cohort_and_idx2 ON person_table_sets.person_id = cohort_and_idx2.person_id 
+LEFT OUTER JOIN first_longcovid_clinic_visit ON person_table_sets.person_id = first_longcovid_clinic_visit.person_id
+LEFT OUTER JOIN first_positive_antibody_test ON person_table_sets.person_id = first_positive_antibody_test.person_id
+LEFT OUTER JOIN last_reasonable_date ON person_table_sets.person_id = last_reasonable_date.person_id
+LEFT OUTER JOIN longest_observation_periods ON person_table_sets.person_id = longest_observation_periods.person_id
+LEFT OUTER JOIN first_b94_etc ON person_table_sets.person_id = first_b94_etc.person_id

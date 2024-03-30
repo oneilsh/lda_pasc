@@ -1,0 +1,24 @@
+#* index_dates_fix_yr10k:
+#*   desc: There are still some strange dates to be cleaned up in the next step, but
+#*     to do so we can't have them be after the year 10000, so this fixes that.
+#*   ext: py
+#*   inputs:
+#*   - index_dates
+#* 
+
+import pyspark.sql.functions as F
+from datetime import date
+
+def index_dates_fix_yr10k(index_dates):
+    colnames = index_dates.schema.names
+    coltypes = dict(index_dates.dtypes)
+
+    for colname in colnames:
+        print(coltypes[colname])
+        if coltypes[colname] == "date":
+            index_dates = index_dates.withColumn(colname, F.when(index_dates[colname].isNull(), None)
+                                                           .when(index_dates[colname] >= date(9999, 1, 1), date(9999, 1, 1))
+                                                           .otherwise(index_dates[colname])
+                                                )
+
+    return index_dates

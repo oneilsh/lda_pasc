@@ -1,0 +1,12 @@
+--* condition_era_with_epochs_epoch_analysis:
+--*   desc: Select only the epoched conditions that are associated with validate or train
+--*     patients.
+--*   ext: sql
+--*   inputs:
+--*   - condition_era_with_epochs
+--*   - all_person_facts_epoch_analysis
+--* 
+
+SELECT condition_era_with_epochs.*
+FROM condition_era_with_epochs
+INNER JOIN all_person_facts_epoch_analysis ON all_person_facts_epoch_analysis.person_id = condition_era_with_epochs.person_id

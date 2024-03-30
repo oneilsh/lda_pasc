@@ -1,0 +1,31 @@
+#* pre_post_conditions:
+#*   desc: Summary visualization of pre and post epochs.
+#*   ext: R
+#*   inputs:
+#*   - person_all_facts
+#* 
+
+pre_post_conditions <- function(person_all_facts) {
+    library(ggplot2)
+    library(dplyr)
+    library(tidyr)
+
+    epoch_stats_by_person <- SparkR::collect(SparkR::select(person_all_facts, c("pre_num_condition_eras", "post_num_condition_eras", "cohort"))) %>%
+        mutate(pre_num_condition_eras = as.numeric(pre_num_condition_eras), post_num_condition_eras = as.numeric(post_num_condition_eras)) %>%
+        filter(complete.cases(.))
+    print(str(epoch_stats_by_person))
+
+    p <- ggplot(epoch_stats_by_person) +
+        stat_summary_hex(aes(x = pre_num_condition_eras, y = post_num_condition_eras, z = pre_num_condition_eras), fun = length, bins = 60) +
+        scale_x_continuous(trans = "log10") + 
+        scale_y_continuous(trans = "log10") +
+        scale_fill_continuous(trans = "log10") +
+        annotation_logticks(sides = "bl") +
+        facet_wrap(~ cohort) +
+        coord_equal()
+
+    plot(p)
+
+    return(epoch_stats_by_person)
+
+}

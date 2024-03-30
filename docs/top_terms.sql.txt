@@ -1,0 +1,557 @@
+--* top_terms:
+--*   desc: Select the top N terms per topic amongst those with positive relevance.
+--*   ext: sql
+--*   inputs:
+--*   - OUTPUT_topic_descriptions
+--* 
+
+WITH relevance_filtered as (
+    SELECT 
+        *
+    FROM OUTPUT_topic_descriptions
+   WHERE relevance > 0 -- relevance is in log2 scale, so 2 is 4x more likely than background
+),
+
+-- best_topic_by_relevance as (
+--     SELECT
+--         max(relevance) as max_relevance,
+--         max_by(concept_id, relevance) as max_concept_id,
+--         max_by(concept_name, relevance) as max_concept_name,
+--         max_by(topic_name, relevance) as max_topic_name
+--     FROM OUTPUT_topic_descriptions
+--     GROUP BY concept_id
+-- ),
+
+-- cut_to_best as (
+--     SELECT 
+--         OUTPUT_topic_descriptions.*
+--     FROM OUTPUT_topic_descriptions
+--     INNER JOIN best_topic_by_relevance ON best_topic_by_relevance.max_concept_id = OUTPUT_topic_descriptions.concept_id
+--                                       AND best_topic_by_relevance.max_topic_name = OUTPUT_topic_descriptions.topic_name
+-- ),
+
+row_nums as (
+    SELECT 
+        topic_name,
+        relevance,
+        term_weight,
+        concept_id,
+        concept_name,
+        row_number() OVER (partition by topic_name order by term_weight desc) as group_num
+    FROM relevance_filtered
+),
+
+top_100s as (
+  select * from row_nums
+  WHERE group_num <= 20
+)
+
+SELECT
+    DISTINCT concept_name, concept_id, term_weight
+FROM top_100s
+
+
+
+
+
+# wrapper function that just calls run_model 
+# designed to catch and handle errors, and be friendly to sparkr gapply() (never got that to work)
+wrapper <- function(key_list, data_df) {
+    library(tidyr)
+    library(dplyr)
+    library(geepack)
+    library(emmeans)
+    library(dplyr)
+    library(stringr)
+    # test <- data.frame(topic = unique(data_df$topic_name))
+    # test$
+    topics <- unique(data_df$topic_name)
+    # return(test)
+    cat("\n\nRunning topic: ", key_list[[1]], " at ", as.character(Sys.time()), "\n")
+
+    model_results <- run_model(data_df)
+    model_results$topic_name <- key_list[[1]]
+    return(model_results)
+
+    result <- tryCatch({
+        model_results <- run_model(data_df)
+        model_results$topic_name <- key_list[[1]]
+        # I guess we cannot use return() in the expression here for tryCatch
+        model_results
+    }, error=function(cond){
+        cat("Got error, returning no result: ", as.character(cond), "\n")
+        return(NULL)
+    }, finally={
+        #cat("Finished with topic ", key_list[[1]], "\n\n")
+    })
+
+    return(result)
+}
+
+# run the model and contrasts with data for a single topic
+run_model <- function(data_df) {
+    #library(PRROC)
+
+    # make sure data in right format
+    data_df$data_partner_id <- factor(data_df$data_partner_id)
+    data_df$cci_score_quan <- as.integer(data_df$cci_score_quan)
+
+    # set reference levels that make sense
+    data_df$index_wave <- relevel(factor(data_df$index_wave), ref = "early")
+    data_df$life_stage_simple <- relevel(factor(data_df$life_stage_simple), ref = "adult")
+    data_df$cdm_name <- relevel(factor(data_df$cdm_name), ref = "OMOP")
+    data_df$cohort_simple <- relevel(factor(data_df$cohort_simple), ref = "control")
+    data_df$race <- relevel(factor(data_df$race), ref = "White")
+
+    # compute per-data-partner covariates for percent of patients w/ PASC and percent of patients w/ COVID
+    # (amongst this complete test data)
+
+    # input: data frame from data_df with only one data partner
+    compute_pasc_density <- function(sub_df) {
+        # each patient is represented twice, by a pre datapoint and a post datapoint, hence the unique()s
+        total_persons <- length(unique(sub_df$person_id))
+        total_pasc <- sub_df %>% filter(cohort_simple == "pasc") %>% pull(person_id) %>% unique() %>% length() 
+        total_covid <- sub_df %>% filter(cohort_simple == "covid-no-pasc") %>% pull(person_id) %>% unique() %>% length() 
+        return(data.frame(
+            percent_pasc = total_pasc / total_persons,
+            percent_covid = total_covid / total_persons
+        ))
+    }
+
+    data_df_by_dp <- data_df %>% group_by(data_partner_id)
+    dp_pasc_covid_densities <- do(data_df_by_dp, compute_pasc_density(.))
+
+    data_df <- merge(data_df, dp_pasc_covid_densities, by = "data_partner_id", all.x = TRUE)
+
+    # now let's compute the relative usage of this topic by data partner, which is defined, for a given data partner,
+    # as the sum of weights assigned to the topic divided by the number of data points (and so would be 1.0 if all data points at
+    # that data partner are entirely within this topic). Note that data points are pre and post for each patient, so we're summing pre and post
+    # probabilities and dividing by number of patients * 2
+
+    # patients aren't duplicated within a topic so don't really have to unique() here 
+    data_point_counts_by_dp <- data_df %>% group_by(data_partner_id) %>% summarize(num_records = length(person_id)) 
+    sum_weights_by_dp <- data_df %>% group_by(data_partner_id) %>% summarize(sum_weight = sum(topic_prob))
+    together <- merge(data_point_counts_by_dp, sum_weights_by_dp, by = "data_partner_id") %>%
+      mutate(dp_relative_topic_usage = sum_weight / num_records) %>%
+      select(data_partner_id, dp_relative_topic_usage)
+    data_df <- merge(data_df, together, by = "data_partner_id", all.x = TRUE)
+    
+
+    # apparently the input should be ordered by cluster:
+    # https://stackoverflow.com/questions/51581103/gee-regression-gives-nan-values-as-result-in-a-dataframe-subset
+    # this is also menteiond in the docs: https://www.rdocumentation.org/packages/geepack/versions/1.3.4/topics/geeglm
+    # I didn't get any warnings so it's already sorted that way, but just in case:
+    data_df <- data_df[order(data_df$person_id, data_df$epoch),]
+
+    print("Structure of input data:")
+    str(data_df)
+    # consideration w/ Brenda and Ken; subset to data partners w/ enough data to build an effective model w/ data_partner_id as random effective
+    # or control for data partner level covariates (e.g. does_data_partner_have_any_pasc_patients, maybe not this exactly, or an interaction term w/ it in the )
+    model <- geeglm(topic_prob ~ 
+                            epoch * cohort_simple * (index_wave + gender + life_stage_simple) + 
+                            percent_pasc * epoch * cohort_simple + 
+                            dp_relative_topic_usage +
+                            race + 
+                            cci_score_quan +
+                            bmi +
+                            #data_partner_id, # fails convergence, causes complete/quasi-complete separation :/ 
+                            cdm_name,
+            family=binomial(),
+            # for repeated measures (two measures, exchangeable corstr)
+            id = person_id, 
+            corstr="exchangeable",
+            # weight all epochs of all patients equally
+            # - weighting by actual count of conditions per patient/epoch results in much higher
+            #   weight for high-utilization (very sick) patients
+            weights = rep(1, nrow(data_df)),
+            scale.fix = FALSE,                 # check w/ Ken or Brenda; possible TODO: output the fitted scale estimate
+            data = data_df)
+    
+
+    # this is going to collect a list of contrast results, each represented by a 
+    # data frame of rows for multiple contrasts (so we have groups of contrasts for different purposes)
+    all_contrasts_list <- list()
+
+    #####
+    ##### Overall pre to post
+    #####
+
+    em <- emmeans(model, specs = ~ epoch)
+    # generate the contrast vectors from the marginal means spec
+    # (see comments on make_var_vectors())
+    v <- make_var_vectors(em)
+
+    # emmeans can run multiple contrasts given as a named list of
+    # contrast vector combinations; do_contrasts() calls it and parses the output 
+    # returning a data frame
+    #   btw: I end up needing to parse these names, but I made them hard to parse.
+    #        This code takes ~16 hours to run, so it was faster to just write the hard parsing code
+    tests <- list(
+        `Overall: Post / Pre` = v$'post' - v$'pre',
+        `Overall: Post Pre Mean` = (v$'post' + v$'pre')/2
+    )
+    # add the resulting data frame to the list of contrast results.
+    # we wrap the result of do_contrasts() in list() so that we can 
+    # concatenate the element to the growing list (otherwise
+    # c() treats the returned dataframe as a list and all hell breaks loose)
+    all_contrasts_list <- c(all_contrasts_list, list(do_contrasts(em, v, tests, "Overall: Post Pre")))
+
+    #####
+    ##### Gender-related contrasts
+    #####
+
+    em <- emmeans(model, specs = ~ gender)
+    # generate the contrast vectors from the marginal means spec
+    # (see comments on make_var_vectors())
+    v <- make_var_vectors(em)
+
+    # emmeans can run multiple contrasts given as a named list of
+    # contrast vector combinations; do_contrasts() calls it and parses the output 
+    # returning a data frame
+    #   btw: I end up needing to parse these names, but I made them hard to parse.
+    #        This code takes ~16 hours to run, so it was faster to just write the hard parsing code
+    tests <- list(
+        `Overall: Female / Male` = v$'FEMALE' - v$'MALE'
+    )
+    # add the resulting data frame to the list of contrast results.
+    # we wrap the result of do_contrasts() in list() so that we can 
+    # concatenate the element to the growing list (otherwise
+    # c() treats the returned dataframe as a list and all hell breaks loose)
+    all_contrasts_list <- c(all_contrasts_list, list(do_contrasts(em, v, tests, "Gender Checks")))
+
+    ##### Gender-related contrasts
+    em <- emmeans(model, specs = ~ cohort_simple + gender + epoch)
+    v <- make_var_vectors(em)
+
+    tests <- list(
+        `Migration: Female COVID+ / Control` = (v$'covid-no-pasc:FEMALE:post' - v$'covid-no-pasc:FEMALE:pre') - 
+                                   (v$'control:FEMALE:post' - v$'control:FEMALE:pre'),
+        `Migration: Male COVID+ / Control` = (v$'covid-no-pasc:MALE:post' - v$'covid-no-pasc:MALE:pre') - 
+                                   (v$'control:MALE:post' - v$'control:MALE:pre'),
+
+        `Migration: Female PASC+ / Control` = (v$'pasc:FEMALE:post' - v$'pasc:FEMALE:pre') - 
+                                   (v$'control:FEMALE:post' - v$'control:FEMALE:pre'),
+        `Migration: Male PASC+ / Control` = (v$'pasc:MALE:post' - v$'pasc:MALE:pre') - 
+                                   (v$'control:MALE:post' - v$'control:MALE:pre')
+    )
+    all_contrasts_list <- c(all_contrasts_list, list(do_contrasts(em, v, tests, "Gender Contrasts")))
+
+    #####
+    ##### Life-stage -related contrasts
+    #####
+    em <- emmeans(model, specs = ~ cohort_simple + life_stage_simple + epoch)
+    v <- make_var_vectors(em)
+
+    tests <- list(
+        # COVID+ (no PASC)
+
+        `Migration: COVID+ Ped. / Control Ped.` = (v$'covid-no-pasc:pediatric:post' - v$'covid-no-pasc:pediatric:pre') -
+                                                (v$'control:pediatric:post' - v$'control:pediatric:pre'),
+
+        `Migration: COVID+ Adol. / Control Adol.` = (v$'covid-no-pasc:adolescent:post' - v$'covid-no-pasc:adolescent:pre') -
+                                                   (v$'control:adolescent:post' - v$'control:adolescent:pre'),
+
+        `Migration: COVID+ Adult / Control Adult` = (v$'covid-no-pasc:adult:post' - v$'covid-no-pasc:adult:pre') -
+                                              (v$'control:adult:post' - v$'control:adult:pre'),
+
+        `Migration: COVID+ Senior / Control Senior` = (v$'covid-no-pasc:senior:post' - v$'covid-no-pasc:senior:pre') -
+                                               (v$'control:senior:post' - v$'control:senior:pre'),
+
+        # PASC+ (possibly COVID+ as well)
+
+        `Migration: PASC+ Ped. / Control Ped. ` = (v$'pasc:pediatric:post' - v$'pasc:pediatric:pre') -
+                                               (v$'control:pediatric:post' - v$'control:pediatric:pre'),
+
+        `Migration: PASC+ Adol. / Control Adol.` = (v$'pasc:adolescent:post' - v$'pasc:adolescent:pre') -
+                                                   (v$'control:adolescent:post' - v$'control:adolescent:pre'),
+
+        `Migration: PASC+ Adult / Control Adult` = (v$'pasc:adult:post' - v$'pasc:adult:pre') -
+                                              (v$'control:adult:post' - v$'control:adult:pre'),
+
+        `Migration: PASC+ Senior / Control Senior` = (v$'pasc:senior:post' - v$'pasc:senior:pre') -
+                                               (v$'control:senior:post' - v$'control:senior:pre')
+    )
+    all_contrasts_list <- c(all_contrasts_list, list(do_contrasts(em, v, tests, "Life Stage Contrasts")))
+    
+
+    # #####
+    # ##### Life-stage -related contrasts, sanity check
+    #####
+    em <- emmeans(model, specs = ~ life_stage_simple)
+    v <- make_var_vectors(em)
+
+    tests <- list(
+        `Overall: Pediatric / Adult` = v$'pediatric' - v$'adult',
+
+        `Overall: Adolescent / Adult` = v$'adolescent' - v$'adult',
+
+        `Overall: Senior / Adult` = v$'senior' - v$'adult'
+
+    )
+    all_contrasts_list <- c(all_contrasts_list, list(do_contrasts(em, v, tests, "Life Stage Checks")))
+    
+
+    #####
+    ##### Wave-related contrasts
+    #####
+    em <- emmeans(model, specs = ~ cohort_simple + index_wave + epoch)
+    v <- make_var_vectors(em)
+
+    tests <- list(
+        # COVID+
+
+        `Migration: COVID+ Early / Control Early` = (v$'covid-no-pasc:early:post' - v$'covid-no-pasc:early:pre') -
+                                              (v$'control:early:post' - v$'control:early:pre'),
+
+        `Migration: COVID+ Alpha / Control Alpha` = (v$'covid-no-pasc:alpha:post' - v$'covid-no-pasc:alpha:pre') -
+                                              (v$'control:alpha:post' - v$'control:alpha:pre'),
+
+        `Migration: COVID+ Delta / Control Delta` = (v$'covid-no-pasc:delta:post' - v$'covid-no-pasc:delta:pre') - 
+                                              (v$'control:delta:post' - v$'control:delta:pre'),
+
+        # # PASC+
+        `Migration: PASC+ Early / Control Early` = (v$'pasc:early:post' - v$'pasc:early:pre') -
+                                              (v$'control:early:post' - v$'control:early:pre'),
+
+        `Migration: PASC+ Alpha / Control Alpha` = (v$'pasc:alpha:post' - v$'pasc:alpha:pre') -
+                                              (v$'control:alpha:post' - v$'control:alpha:pre'),
+
+        `Migration: PASC+ Delta / Control Delta` = (v$'pasc:delta:post' - v$'pasc:delta:pre') - 
+                                              (v$'control:delta:post' - v$'control:delta:pre')#,
+    )
+    all_contrasts_list <- c(all_contrasts_list, list(do_contrasts(em, v, tests, "Wave Contrasts")))
+
+    #####
+    ##### Has pasc patients tests
+    #####
+
+    # em <- emmeans(model, specs = ~ has_pasc_patients)
+    # # generate the contrast vectors from the marginal means spec
+    # # (see comments on make_var_vectors())
+    # v <- make_var_vectors(em)
+
+    # # emmeans can run multiple contrasts given as a named list of
+    # # contrast vector combinations; do_contrasts() calls it and parses the output 
+    # # returning a data frame
+    # #   btw: I end up needing to parse these names, but I made them hard to parse.
+    # #        This code takes ~16 hours to run, so it was faster to just write the hard parsing code
+    # tests <- list(
+    #     `Overall: has pasc` = v$'TRUE' - v$'FALSE'
+    # )
+    # # add the resulting data frame to the list of contrast results.
+    # # we wrap the result of do_contrasts() in list() so that we can 
+    # # concatenate the element to the growing list (otherwise
+    # # c() treats the returned dataframe as a list and all hell breaks loose)
+    # all_contrasts_list <- c(all_contrasts_list, list(do_contrasts(em, v, tests, "Overall: has pasc")))
+
+    # now combine all the results data frames into one and return it
+    ret_df <- do.call(rbind, all_contrasts_list)
+    return(ret_df)
+}
+
+# create forest-plot-like plot. takes all the topic results from upstream and a specification of the subset of topics to plot. Contrast filter is used to specify
+# which group of contrasts to plot (sanity checks, contrasts for PASC cohort, or 
+# contrasts for COVID cohort)
+# unique_topics is the ordered full list of unique topic names, and could 
+# be computed here rather than passed as a separate var 
+do_plot_clean <- function(df, unique_topics, topics_subset, contrast_filter = "Migration", title = "Odds Ratios") {
+
+    # some topics the model diverged (small groups being fully seperable)
+    # we don't want to drop them altogether (or we'd lose the facet in later plots), just
+    # replace entries with NA so the lines/points aren't plotted
+    failed_convergence_topics <- df %>% 
+                                    filter(abs(estimate) > 1000) %>%
+                                    pull(topic_name) %>%
+                                    unique()
+
+    # create a contrast_renamed column for plotting
+    unique_contrast_group_combos <- df[, c("contrast", "group")] %>% 
+        unique() %>%
+        arrange(group) %>%
+        mutate(contrast_renamed = str_replace(contrast, 
+                                      "^Migration:.+((Early)|(Delta)|(Alpha)|(Ped.)|(Adult)|(Adol.)|(Male)|(Female)|(Senior)).*$",
+                                      "\\1")) %>%
+        mutate(contrast_renamed = str_replace(contrast_renamed, 
+                                  "(Overall: )",
+                                      "")) %>%
+        mutate(contrast_renamed = case_when(
+            contrast_renamed == "Ped." ~ "Pediatric",
+            contrast_renamed == "Adol." ~ "Adolescent",
+            TRUE ~ contrast_renamed
+        ))
+
+    df <- df %>%
+            # for topics that failed convergence, we don't want to plot the lines, 
+            # but we don't want to drop them altogether (or we'd lose the facet), so just
+            # replace entries with NA so the lines/points aren't plotted
+            mutate(p_adj = ifelse(topic_name %in% failed_convergence_topics, NA, p_adj)) %>%
+            mutate(estimate = ifelse(topic_name %in% failed_convergence_topics, NA, estimate)) %>%
+            mutate(estimate_exp = ifelse(topic_name %in% failed_convergence_topics, NA, exp(estimate))) %>%
+            mutate(asymp_LCL = ifelse(topic_name %in% failed_convergence_topics, NA, asymp_LCL)) %>%
+            mutate(asymp_UCL = ifelse(topic_name %in% failed_convergence_topics, NA, asymp_UCL)) %>%
+            mutate(p_value = ifelse(topic_name %in% failed_convergence_topics, NA, p_value)) %>%
+            mutate(p_adj_small = ifelse(topic_name %in% failed_convergence_topics, NA, p_adj_small)) %>%
+
+            # filter to topics of interest
+            filter(topic_name %in% topics_subset) %>% 
+            # order the panels by topic number
+            mutate(topic_name = factor(topic_name, levels = unique_topics)) %>%
+            # keep only the contrast groups we asked for
+            filter(str_detect(contrast, contrast_filter)) %>%
+            filter(contrast != "Overall: Post Pre Mean" & contrast != "Overall: Post / Pre") %>%
+            # give the contrasts nicer names for plotting
+            mutate(contrast = factor(contrast, 
+                                     levels = unique_contrast_group_combos$contrast,
+                                     labels = unique_contrast_group_combos$contrast_renamed))
+
+    df$contrast <- factor(df$contrast, levels = c("Female", 
+                                                  "Male", 
+                                                  "Pediatric",
+                                                  "Adolescent",
+                                                  "Adult",
+                                                  "Senior",
+                                                  "Early",
+                                                  "Alpha", 
+                                                  "Delta",
+                                                  "Post / Pre",
+                                                  "Female / Male",
+                                                  "Pediatric / Adult",
+                                                  "Adolescent / Adult",
+                                                  "Senior / Adult"),
+                                        ordered =TRUE)
+
+    print(summary(df))
+
+    p <- ggplot(df) +
+        annotation_raster(alpha("black", 0.05), xmin = -Inf, xmax = Inf, ymin = 3.5, ymax = 7.5) +
+        geom_vline(xintercept = 1, linetype = "dashed", color = "#FF8888") + 
+        geom_linerange(aes(xmin = exp(asymp_LCL), 
+                           xmax = exp(asymp_UCL), 
+                           y = contrast, 
+                           color = group,
+                           #color = contrast,
+                           group = group, 
+                           alpha = p_adj_small)) + 
+        geom_point(aes(x = exp(estimate), 
+                       y = contrast, 
+                       color = group,
+                       #color = contrast,
+                       group = group, 
+                       alpha = p_adj_small)) +
+        scale_x_continuous(name = "Odds Ratio (95% CI)", trans = "log10", labels = label_number()) +
+        scale_y_discrete(limits = rev) + # flip the y axis to put female/male on top
+        annotation_logticks(sides = "b") +
+        facet_wrap( ~ topic_name, scales = "free_x") +
+        theme_bw(7) +
+        theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+        scale_color_brewer(palette = "Set1") +
+        #scale_color_manual(values = c(
+        #     "Female" = "pink",
+        #     "Male" = "blue",
+        #     "Pediatric" = "green",
+        #     "Adolescent" = "blue",
+        #     "Adult" = "red",
+        #     "Senior" = "orange",
+        #     "Early" = "blue",
+        #     "Alpha" = "green",
+        #     "Delta" = "orange" 
+        # )) +
+        scale_alpha_discrete(name = "p < 0.05 (Holm corrected)", range = c(0.25,1)) +
+        ggtitle(title) +
+        theme(strip.text.x = element_text(size = 6, margin(0, 0, 0, 0, "cm"))) +
+        theme(aspect.ratio = 0.75)
+ 
+    plot(p)
+    return(p)
+
+}
+
+# this page describes emmeans custom contrasts
+# using 1-hot encoded vectors: https://aosmith.rbind.io/2019/04/15/custom-contrasts-emmeans/
+# this function automates the process, resulting in a list of these vectors
+# indexed by level name of the the contrast variable
+## NOTE: since the names of the vectors are determined by the levels of the 
+##  contrast variable, use alphanumeric+_- levels, or be willing to access as e.g. vars$`Level 1`
+make_var_vectors <- function(em) {
+  # use contrast() from emmeans to compute the contrasts, 
+  # grabbing the result as dataframe and grabbing the first column of 
+  # contrast names, in order as per 
+  #contrast_names <- as.data.frame(em)[[1]] %>% as.character()
+  paste_colon <- function(...) {
+    return(paste(..., sep = ":"))
+  }
+  contrast_names <- as.data.frame(em) %>% 
+                      select(-emmean, -SE, -asymp.LCL, -asymp.UCL, -df) %>% 
+                      lapply(as.character) %>% 
+                      do.call(paste_colon, .)
+  
+  n_contrasts <- length(contrast_names)
+  
+  # create a list of one-hot vectors in increasing order
+  var_vectors <- 1:n_contrasts %>% lapply(function(index) {
+                                            base_vec <- rep(0, n_contrasts) # start with the right number of 0s
+                                            base_vec[index] <- 1            # set the current index to one
+                                            return(base_vec)
+                                          }) 
+  
+  # name the list elements so they can be accessed by name
+  names(var_vectors) <- contrast_names
+  return(var_vectors)
+}
+
+# given an emmeans object, v (result of make_var_vectors(em), and tests
+# (a named list of tests encoded as vectors), returns a single-row dataframe
+# with stats on the tests run. A group name can be given to indicate which 'group'
+# these contrasts belong to (e.g. life stage tests, wave tests, etc.)
+do_contrasts <- function(em, v, tests, group = NA) {  
+    print("Running contrasts:")
+    print(tests)
+    print(em)  
+    contrasts <- contrast(em, method = tests)
+
+    contrasts_confint_df <- contrasts %>%
+        confint() %>%
+        as.data.frame() %>%
+        select(contrast, estimate, asymp.LCL, asymp.UCL) 
+
+    contrasts_pval_df <- contrasts %>%
+        test() %>%
+        as.data.frame() %>%
+        select(contrast, p.value)
+
+    res <- merge(contrasts_pval_df, contrasts_confint_df, by = "contrast")
+    res$group <- group
+    res$contrast <- as.character(res$contrast)
+
+    return(res)
+}
+
+# given a *list* of equal-length vectors, computes the element-wise mean
+# (not used currently)
+vmean_list <- function(vec_list) {
+  mat <- do.call(cbind, vec_list)
+  return(rowMeans(mat))
+}
+
+# given a bunch of vectors of the same length (not in a list), returns an
+# element-wise mean vector
+# (not used currently)
+vmean <- function(...) {
+  vec_list <- list(...)
+  mat <- do.call(cbind, vec_list)
+  return(rowMeans(mat))
+}
+
+to_rdata <- function(data) {
+    output <- new.output()
+    output_fs <- output$fileSystem()
+    saveRDS(data, output_fs$get_path("data.rds", 'w'))
+}
+
+from_rdata <- function(data) {
+    fs <- data$fileSystem()
+
+    path <- fs$get_path("data.rds", 'r')
+    rds <- readRDS(path)
+    return(rds)
+}

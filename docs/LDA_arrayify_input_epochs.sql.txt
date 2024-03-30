@@ -1,0 +1,10 @@
+--* LDA_arrayify_input_epochs:
+--*   desc: Shaping for model prediction.
+--*   ext: sql
+--*   inputs:
+--*   - prep_epoch_model_input
+--* 
+
+SELECT person_id, data_partner_id, collect_list(string(concept_id)) as concept_ids
+FROM prep_epoch_model_input
+GROUP BY person_id, data_partner_id

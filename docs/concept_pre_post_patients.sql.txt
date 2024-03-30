@@ -1,0 +1,123 @@
+--* concept_pre_post_patients:
+--*   desc: "Defines counts for downstream 2x2 tests. For each concept (for each cohort\
+--*     \ and life stage, which can be summarized over later), \ncounts the number of\
+--*     \ patients who have that concept (one or more entries) in pre but not post, post\
+--*     \ but not pre, both, and neither.\n"
+--*   ext: sql
+--*   inputs:
+--*   - dev_filter_patients_for_2x2
+--*   - condition_era_with_epochs
+--*   - top_terms
+--* 
+
+WITH persons_tested AS (
+    SELECT DISTINCT 
+        person_id,
+        cohort_simple,
+        life_stage_simple
+    FROM dev_filter_patients_for_2x2
+),
+
+-- there's gotta be a simpler way to get a single col, 2 row df ;)
+distinct_epochs AS (
+    SELECT DISTINCT 
+        epoch
+    FROM condition_era_with_epochs
+    WHERE epoch IN ('pre', 'post')
+),
+
+person_possible_epochs AS (
+    SELECT
+        persons_tested.*,
+        distinct_epochs.epoch
+    FROM persons_tested
+    CROSS JOIN distinct_epochs
+),
+
+person_possible_epoch_concepts AS (
+    SELECT
+        person_possible_epochs.*,
+        top_terms.concept_id,
+        top_terms.concept_name
+    FROM person_possible_epochs
+    CROSS JOIN top_terms
+    ORDER BY top_terms.concept_id, person_possible_epochs.person_id
+),
+
+person_actual_epoch_concepts AS (
+    SELECT DISTINCT
+        person_id,
+        epoch,
+        condition_concept_id as concept_id,
+        condition_concept_name as concept_name,
+        1 as occurred_raw
+    FROM condition_era_with_epochs
+    WHERE epoch IN ('pre', 'post')
+),
+
+person_actual_vs_possible AS (
+    SELECT 
+        person_possible_epoch_concepts.*,
+        person_actual_epoch_concepts.occurred_raw
+    FROM person_possible_epoch_concepts
+    LEFT OUTER JOIN person_actual_epoch_concepts ON
+        person_possible_epoch_concepts.person_id = person_actual_epoch_concepts.person_id
+        AND person_possible_epoch_concepts.epoch = person_actual_epoch_concepts.epoch
+        AND person_possible_epoch_concepts.concept_id = person_actual_epoch_concepts.concept_id
+    ORDER BY person_possible_epoch_concepts.person_id, person_possible_epoch_concepts.concept_id, person_possible_epoch_concepts.epoch
+),
+
+fix_occurred AS (
+    SELECT 
+        person_actual_vs_possible.person_id,
+        person_actual_vs_possible.life_stage_simple,
+        person_actual_vs_possible.cohort_simple,
+        person_actual_vs_possible.epoch,
+        person_actual_vs_possible.concept_id,
+        person_actual_vs_possible.concept_name,
+        CASE
+            WHEN occurred_raw = 1 THEN 1
+            ELSE 0
+        END as occurred
+    FROM person_actual_vs_possible
+),
+
+occurred_wider AS (
+    SELECT  
+        *
+    FROM fix_occurred
+    PIVOT (
+        AVG(occurred)
+        FOR epoch in ('pre' pre, 'post' post)
+    )
+),
+
+aggregated AS (
+    SELECT
+        life_stage_simple,
+        cohort_simple, 
+        concept_id,
+        concept_name,
+        pre,
+        post,
+        count(*) as num_patients
+    FROM occurred_wider
+    GROUP BY 
+        life_stage_simple,
+        cohort_simple, 
+        concept_id,
+        concept_name,
+        pre,
+        post
+),
+
+no_pre_occurances AS (
+    SELECT
+        *
+    FROM aggregated
+    WHERE pre = 0
+)
+
+SELECT /*+ BROADCAST(top_terms), COALESCE(1) */
+    * 
+FROM aggregated

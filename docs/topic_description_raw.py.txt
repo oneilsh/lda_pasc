@@ -1,0 +1,44 @@
+#* topic_description_raw:
+#*   desc: Extract descriptions of topics from the model as probability distributions
+#*     over all terms.
+#*   ext: py
+#*   inputs:
+#*   - lda_model
+#* 
+
+# now we can get the topics!
+# we mentioned earlier that the vectorizer has .fit() and .transform() methods, and it turns out that the LDA model also has .fit() (which we've seen)
+# and .transform() (which we'll use soon), and that because these 'fit a model' 'use a model' steps are common across different parts of a machine learning analysis, 
+# it makes sense to "chain" them together into a pipeline. That's what we produced with Model(Stage(ldamodel)) - a pipeline of models contained in stages; our
+# pipeline just happens to only have one stage. Having pipelines of models in stages supports developing complex pipelines and reusing them or using them in 
+# other apps in the enclave (like the "Modeling objective" app). 
+
+# We're not really using those features though, we just needed to build the pipeline so we could pass our pyspark.ml model between transforms :)
+# here we just get the model back out the pipeline and call its .describeTopics() method, which returns a data frame.
+
+def topic_description_raw(lda_model):
+    ldamodel = lda_model.stages[0].model
+
+    topics_description = ldamodel.describeTopics(maxTermsPerTopic = 100000000) # default is 10; we can ask for up to the size of the full vocabulary
+
+    # notice the output types - arrays!
+    return topics_description
+
+#################################################
+## Global imports and functions included below ##
+#################################################
+
+import pickle
+
+def to_pickle(data):
+    output = Transforms.get_output()
+    output_fs = output.filesystem()
+    
+    with output_fs.open('data.pickle', 'wb') as f: 
+        pickle.dump(data, f)
+
+def from_pickle(transform_input):
+    with transform_input.filesystem().open('data.pickle', 'rb') as f:    
+        data = pickle.load(f)
+
+    return data

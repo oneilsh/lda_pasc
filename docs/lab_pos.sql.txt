@@ -1,0 +1,14 @@
+--* lab_pos:
+--*   desc: Identifies the first date of any PCR/Ag lab positive result. Original code
+--*     by Emily Pfaff.
+--*   ext: sql
+--*   inputs:
+--*   - covid_tests
+--*   - measurement_lda_pin
+--*   - positive_words
+--* 
+
+SELECT m.person_id, min(m.measurement_date) as pos_test_idx
+FROM Measurement_lda_pin m JOIN covid_tests p on m.measurement_concept_id = p.concept_id
+    JOIN positive_words pr on m.value_as_concept_id = pr.concept_id
+GROUP BY m.person_id

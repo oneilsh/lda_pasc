@@ -1,0 +1,27 @@
+--* topic_description_decoded_zipped:
+--*   desc: More reformatting to get useful topic descriptions.
+--*   ext: sql
+--*   inputs:
+--*   - topic_description_decoded
+--* 
+
+-- at this point we have three array columns, where each row contains 
+-- 3 arrays of the same length; termIndices (the index of the terms in the vocab), termWeights (the term weights in the topic), and termTerms (vocabulary entries)
+-- if we want to get the data into a "long" format we can use the posexplode() function, but first we need to get all these arrays into a single
+-- column that can be re-exploded. This could be a nested SQL statement but we'll break it apart into steps for clarity.
+
+-- the arrays_zip() function does this; given 3 arrays like [1, 2, 3], [0.1, 0.2, 0.4], ["COVID19", "Cough", "Fever"]
+-- it generates an array column where each array entry is a struct of the arrays "zipped" 
+-- together, like [{1, 0.1, "COVID19"}, {2, 0.2, "Cough"}, {3, 0.3, "Fever"}]
+
+-- actually, the struct entries are named with the original column names, so really it's
+-- [{"termIndices": 1, "termWeights": 0.1, "termTerms": "COVID19"}, ...]
+ 
+--- then we use posexplode() to pull the array of structs into multiple rows of structs (repeating the topic column entry as needed)
+--- notice the column output type: struct
+
+SELECT topic, posexplode(topicInfo) as (topicTermIndex, topicInfoStructs)
+FROM (
+    SELECT topic, arrays_zip(termIndices, termWeights, termTerms) as topicInfo
+    FROM topic_description_decoded)
+    

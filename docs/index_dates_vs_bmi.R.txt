@@ -1,0 +1,51 @@
+#* index_dates_vs_bmi:
+#*   desc: Summary visualization patient index dates vs how many conditions they had
+#*     pre vs post.
+#*   ext: R
+#*   inputs:
+#*   - person_all_facts
+#* 
+
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(hexbin)
+
+index_dates_vs_pre_post_count_ratio <- function( person_all_facts) {
+    epoch_stats_by_person <- SparkR::collect(SparkR::select(person_all_facts, c("post_num_condition_eras", 
+                                                                                "pre_num_condition_eras", 
+                                                                                #"post_epoch_effective_days", 
+                                                                                #"pre_epoch_effective_days", 
+                                                                                "cohort", 
+                                                                                "index_date"))) %>%
+        mutate(post_num_condition_eras = as.numeric(post_num_condition_eras)) %>%
+        mutate(pre_num_condition_eras = as.numeric(pre_num_condition_eras)) %>%
+        #mutate(post_epoch_effective_days = as.numeric(post_epoch_effective_days)) %>%
+        #mutate(pre_epoch_effective_days = as.numeric(pre_epoch_effective_days)) %>%
+        mutate(pre_post_count_ratio = pre_num_condition_eras / post_num_condition_eras)
+
+    str(epoch_stats_by_person)
+    
+    #epoch_stats_by_person <- epoch_stats_by_person %>% sample_frac(0.2)
+    
+    p <- ggplot(epoch_stats_by_person) +
+        stat_summary_hex(aes(x = index_date, y = pre_post_count_ratio, z = index_date), fun = length, bins = 60) +
+        #scale_x_continuous(trans = "log10") + 
+        scale_y_continuous(trans = "log10") +
+        #scale_fill_continuous(trans = "log10") +
+        annotation_logticks(sides = "l") +
+        facet_wrap(~ cohort) 
+        #coord_equal()
+
+    plot(p)
+
+    # p2 <- ggplot(epoch_stats_by_person) +
+    #     stat_summary_2d(aes(x = pre_epoch_effective_days, y = post_epoch_effective_days, z = increase_effective_days), fun = length, bins = 60) +
+    #     scale_x_continuous(trans = "log10") + 
+    #     scale_y_continuous(trans = "log10") +
+    #     scale_fill_continuous(trans = "log10") +
+    #     annotation_logticks(sides = "bl")
+    # plot(p2)
+
+    return(epoch_stats_by_person)
+}

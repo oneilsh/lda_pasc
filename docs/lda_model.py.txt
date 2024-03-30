@@ -1,0 +1,57 @@
+#* lda_model:
+#*   desc: Train the model! Don't use the hold_out (validation) data.
+#*   ext: py
+#*   inputs:
+#*   - vectorize_concepts
+#* 
+
+# now that we have the data in the format needed, we can run the clustering algorithm! 
+from pyspark.ml.clustering import LDA
+
+# Much like with the vectorizer, the LDA clustering model has two steps:
+# 1) fitting - where we identify the "topics" that are represented in the data
+# 2) transforming - where given some input data, we can identify which topics each record is about
+
+# since we'd again like to have two outputs (the description of the topics and some transformed data clustering them into topics) but can only send one, 
+# we are going to return the model object, so that later we can use the model for the two purposes
+# if we tried to use our to_pickle() trick to return it though we'd get an error - pyspark.ml models are too fancy to serialize that way
+# fortunately, foundry defines some specific wrappers for serializing pyspark.ml (and sklearn) models, called Model and Stage. 
+
+# oh yeah - foundry_ml isn't in the default package list, use the ML-resources profile to grab it in the environment or customize your environment to include it
+from foundry_ml import Model, Stage
+
+def lda_model(vectorize_concepts):
+    # define the model and the number of topics (aka clusters) we'd like
+    lda = LDA(k = 300, featuresCol = "concept_vector", seed = 42, maxIter = 200)
+
+    nonholdout = vectorize_concepts.filter("hold_out = false")
+    # fit it to the data to learn the topics; notice that it really only pays attention to the given featuresCol information
+    ldamodel = lda.fit(nonholdout)
+
+    # once fit, we can get info about the learned topics (as a data frame) with .describeTopics()
+    # but we're not going to return that here, since we want to do other things with the model too
+    # print(ldamodel.describeTopics())
+
+    # instead, we'll return the model itself using the foundry model-wrapping classes
+    # We'll see in the next transform why it's Model(Stage(ldamodel)) instead of just Model(ldamodel) or something else
+    # notice the icon for the return - it's a platform-specific data type
+    return Model(Stage(ldamodel))
+
+#################################################
+## Global imports and functions included below ##
+#################################################
+
+import pickle
+
+def to_pickle(data):
+    output = Transforms.get_output()
+    output_fs = output.filesystem()
+    
+    with output_fs.open('data.pickle', 'wb') as f: 
+        pickle.dump(data, f)
+
+def from_pickle(transform_input):
+    with transform_input.filesystem().open('data.pickle', 'rb') as f:    
+        data = pickle.load(f)
+
+    return data

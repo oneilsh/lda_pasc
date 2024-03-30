@@ -1,0 +1,11 @@
+--* measurement_lda_pin:
+--*   desc: Filters OMOP measurement table by kept sites.
+--*   ext: sql
+--*   inputs:
+--*   - measurement
+--*   - keep_sites
+--* 
+
+SELECT measurement.*
+FROM measurement
+INNER JOIN keep_sites ON keep_sites.data_partner_id = measurement.data_partner_id

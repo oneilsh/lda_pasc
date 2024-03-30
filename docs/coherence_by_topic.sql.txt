@@ -1,0 +1,47 @@
+--* coherence_by_topic:
+--*   desc: Compute topic coherence scores (ignoring data partner).
+--*   ext: sql
+--*   inputs:
+--*   - coherences_w_stats
+--* 
+
+WITH summed_by_topic AS (
+    SELECT
+        topic_name,
+        concept_id_1,
+        concept_id_2,
+        sum(n_concept_1) as n_concept_1,
+        sum(n_concept_2) as n_concept_2,
+        sum(n_concept_both) as n_concept_both,
+        sum(n_patients) as n_patients
+    FROM coherences_w_stats
+    GROUP BY
+        topic_name,
+        concept_id_1,
+        concept_id_2
+),
+
+with_ratios AS (
+    SELECT
+        *,
+        n_concept_1 / n_patients as concept_1_ratio,
+        n_concept_2 / n_patients as concept_2_ratio,
+        n_concept_both / n_patients as both_ratio
+    FROM summed_by_topic
+),
+
+with_pmi AS (
+    SELECT 
+        *,
+        CASE
+            WHEN concept_1_ratio * concept_2_ratio > 0 THEN log2((1 + both_ratio) / (concept_1_ratio * concept_2_ratio))
+            ELSE 0
+        END as pmi_smooth_one
+    FROM with_ratios
+)
+
+SELECT
+    topic_name,
+    sum(pmi_smooth_one) as sum_coherence
+FROM with_pmi
+GROUP BY topic_name

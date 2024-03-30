@@ -1,0 +1,12 @@
+--* mis_c:
+--*   desc: Identifies the first date of a MIS-C diagnosis per patient (not used in current
+--*     analysis). Original code by Emily Pfaff.
+--*   ext: sql
+--*   inputs:
+--*   - condition_occurrence_lda_pin
+--* 
+
+SELECT co.person_id, min(co.condition_start_date) as m3581_idx
+FROM condition_occurrence_lda_pin co 
+WHERE co.condition_concept_id IN (713856,703578) or co.condition_source_value LIKE '%M35.81%'
+GROUP BY co.person_id

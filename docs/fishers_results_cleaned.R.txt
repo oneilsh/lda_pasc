@@ -1,0 +1,53 @@
+#* fishers_results_cleaned:
+#*   desc: Reshape 2x2 results to wide format for publication.
+#*   ext: R
+#*   inputs:
+#*   - fishers_results_top_topics
+#* 
+
+library(dplyr)
+library(tidyr)
+library(stringr)
+#library(ggrepel)
+#library(scales)
+
+fishers_results_cleaned <- function(fishers_results_top_topics) {
+    df <- fishers_results_top_topics %>%
+        ## code to filter out results where the individual counts are less than 20. 
+        ## removed currently since I _think_ it's ok to report e.g. p-values from small 2x2s
+        ## Could also filter by sum of counts <= 20; there shouldn't be many significant of those
+        #
+        #   filter(control_nopre_nopost >= 20 &
+        #          control_nopre_yespost >= 20 &
+        #          test_nopre_nopost >= 20 &
+        #          test_nopre_yespost >= 20
+        #         ) %>%
+          select(term_weight, cohort_simple, estimate, conf_int_lower, conf_int_upper, pval_adj, concept_id, concept_name, topic_name) %>%
+          rename(top_topic_name = topic_name) 
+
+    print(head(df, n = 20))
+
+    sig_concepts <- df %>%
+        filter(pval_adj < 0.05) %>%
+        pull(concept_id) %>%
+        unique()
+        
+
+    df_wide <- pivot_wider(df, names_from = "cohort_simple", values_from = c("estimate", "pval_adj", "conf_int_lower", "conf_int_upper"))
+
+    df_filtered <- df_wide[df_wide$concept_id %in% sig_concepts, ]
+
+    # remove extreme results (infs and 0s)
+    # df_filtered <- df_filtered %>%
+    #    filter(!is.infinite(estimate_pasc) & estimate_pasc != 0) %>%
+    #    filter(!is.infinite(`estimate_covid-no-pasc`) & `estimate_covid-no-pasc` != 0) 
+
+    # create a column indicating if the concept is sig for both cohorts or just one
+    df_filtered$sig_category <- NA
+    df_filtered$sig_category[df_filtered$pval_adj_pasc <= 0.05] <- "PASC"
+    df_filtered$sig_category[df_filtered$`pval_adj_covid-no-pasc` <= 0.05] <- "COVID"
+    df_filtered$sig_category[df_filtered$`pval_adj_covid-no-pasc` <= 0.05 & df_filtered$pval_adj_pasc <= 0.05] <- "Both"
+    
+    return(df_filtered)
+
+}

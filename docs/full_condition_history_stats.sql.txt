@@ -1,0 +1,18 @@
+--* full_condition_history_stats:
+--*   desc: For each patient defines metadata about their total condition history.
+--*   ext: sql
+--*   inputs:
+--*   - condition_era_full_clean
+--* 
+
+SELECT
+    person_id,
+    data_partner_id,
+    count(condition_concept_id) as total_history_conditions,
+    count(DISTINCT condition_concept_id) as total_history_conditions_unique,
+    count(DISTINCT condition_concept_id) / count(condition_concept_id) as unique_history_conditions_ratio,
+    min(condition_era_start_date) as min_history_condition_date,
+    max(condition_era_end_date) as max_history_condition_date,
+    datediff(max(condition_era_end_date),  min(condition_era_start_date)) as total_history_condition_days
+FROM condition_era_full_clean
+GROUP BY person_id, data_partner_id

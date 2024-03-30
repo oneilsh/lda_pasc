@@ -1,0 +1,31 @@
+#* topic_names_w_stats:
+#*   desc: Generate more detailed topic names with usage, entropy, and z-scored coherence
+#*     for use in cloud plots.
+#*   ext: R
+#*   inputs:
+#*   - coherence_by_topic
+#*   - topic_names
+#*   - datapartner_topic_usage_entropy
+#* 
+
+library(dplyr)
+library(stringr)
+
+topic_names_w_stats <- function(topic_names, coherence_by_topic, datapartner_topic_usage_entropy) {
+    topic_names <- topic_names %>%
+    # remove trailing paren
+    merge(datapartner_topic_usage_entropy, by = "topic_name") %>%
+    merge(coherence_by_topic, by = "topic_name") %>%
+    mutate(topic_name_stats = str_match(topic_name, "(T-\\d+)")[,2]) %>%
+    mutate(U = round(topic_usage_percent * 100, 1),
+           #H = round((entropy - mean(entropy))/sd(entropy), 2),
+           H = round(relative_entropy, 2),
+           C = round((sum_coherence - mean(sum_coherence))/sd(sum_coherence), 1)) %>%
+    mutate(topic_name_stats = paste0(topic_name_stats, " (",
+                               "U ", U, "%", 
+                               ", H ", H, 
+                               ", C ", C, ")"
+                               ))
+
+    return(topic_names)
+}

@@ -1,0 +1,26 @@
+--* top_1000_terms_per_topic:
+--*   desc: For data i/o performance select the top 1000 terms per topic by weight for
+--*     plotting.
+--*   ext: sql
+--*   inputs:
+--*   - renamed_OUTPUT_topic_descriptions
+--* 
+
+-- for use downstream in topic cloud plots, since apparently I can't read in even medium-size datasets in R now
+-- (and it's easier to do this in SQL than SparkR)
+
+WITH numbered AS (
+    SELECT 
+        *,
+        row_number() OVER (PARTITION BY topic_name ORDER BY term_weight DESC) as rownum
+    FROM renamed_OUTPUT_topic_descriptions
+)
+
+SELECT /*+ COALESCE(1) */
+    topic_name,
+    term_weight,
+    relevance,
+    concept_id,
+    concept_name
+FROM numbered
+WHERE rownum <= 1000

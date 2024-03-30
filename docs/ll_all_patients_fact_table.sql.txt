@@ -1,0 +1,10 @@
+--* ll_all_patients_fact_table:
+--*   desc: Filters basic patient facts information by kept sites.
+--*   ext: sql
+--*   inputs:
+--*   - all_patients_summary_facts_table_LDS
+--*   - keep_sites
+--* 
+SELECT all_patients_summary_facts_table_LDS.*
+FROM all_patients_summary_facts_table_LDS
+INNER JOIN keep_sites ON keep_sites.data_partner_id = all_patients_summary_facts_table_LDS.data_partner_id

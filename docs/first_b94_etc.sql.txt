@@ -1,0 +1,16 @@
+--* first_b94_etc:
+--*   desc: Identifies the date of the first 'sequelae of infection disease' (B94.8 maps
+--*     to it and was the code used prior to Oct 1 2021).
+--*   ext: sql
+--*   inputs:
+--*   - condition_occurrence_lda_pin
+--* 
+
+SELECT condition_occurrence_lda_pin.person_id, 
+CASE
+    WHEN min(condition_occurrence_lda_pin.condition_start_date) > date('9999-12-31') THEN date('9999-12-31')
+    ELSE min(condition_occurrence_lda_pin.condition_start_date)
+END as first_b94_etc
+FROM condition_occurrence_lda_pin 
+WHERE condition_occurrence_lda_pin.condition_concept_id = 36714927
+GROUP BY person_id

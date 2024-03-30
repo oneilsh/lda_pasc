@@ -1,0 +1,17 @@
+--* renamed_OUTPUT_topic_descriptions:
+--*   desc: We want to plot word clouds for topics; replace the basic topic names with
+--*     the fancier ones for these.
+--*   ext: sql
+--*   inputs:
+--*   - topic_names_w_stats
+--*   - OUTPUT_topic_descriptions
+--* 
+
+SELECT 
+    OUTPUT_topic_descriptions.term_weight,
+    OUTPUT_topic_descriptions.relevance,
+    OUTPUT_topic_descriptions.concept_id,
+    OUTPUT_topic_descriptions.concept_name,
+    topic_names_w_stats.topic_name_stats as topic_name
+FROM OUTPUT_topic_descriptions
+INNER JOIN topic_names_w_stats USING (topic_name)

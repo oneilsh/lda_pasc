@@ -1,0 +1,15 @@
+--* OUTPUT_person_topic_assignment:
+--*   desc: Join nicer topic names to the person topic assignment information.
+--*   ext: sql
+--*   inputs:
+--*   - person_topics_arrayify_long
+--*   - topic_names
+--* 
+
+-- pull more readable topic names into the weighted assignment of
+-- person_ids to topics
+
+SELECT person_topics_arrayify_long.*, topic_names.topic_name
+FROM person_topics_arrayify_long
+JOIN topic_names ON
+topic_names.topic_index = person_topics_arrayify_long.topic_index

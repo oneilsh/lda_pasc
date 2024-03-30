@@ -1,0 +1,11 @@
+--* condition_era_lda_pin:
+--*   desc: Filters OMOP condition_era table by kept sites.
+--*   ext: sql
+--*   inputs:
+--*   - condition_era
+--*   - keep_sites
+--* 
+
+SELECT condition_era.*
+FROM condition_era
+INNER JOIN keep_sites ON keep_sites.data_partner_id = condition_era.data_partner_id

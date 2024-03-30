@@ -1,0 +1,11 @@
+--* person_topics_arrayify_long:
+--*   desc: Reshape person/topic assignment output.
+--*   ext: sql
+--*   inputs:
+--*   - person_topic_assignment
+--* 
+
+-- Array columns are cool and all, but lets extract the topic probabilities out to individual rows, making the data "long"
+
+SELECT person_id, data_partner_id, posexplode(topic_dist_array) as (topic_index, topic_prob)
+FROM person_topic_assignment

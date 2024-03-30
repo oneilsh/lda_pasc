@@ -1,0 +1,11 @@
+--* positive_words:
+--*   desc: Identifies measurement concepts that indicate a positive lab result. Original
+--*     code by Emily Pfaff.
+--*   ext: sql
+--*   inputs:
+--*   - concept_set_members_lda_pin
+--*   - concept_lda_pin
+--* 
+
+SELECT cm.*
+FROM concept_lda_pin cl JOIN concept_set_members_lda_pin cm ON cl.concept_id = cm.concept_id and cm.concept_set_name = 'ResultPos' and cm.is_most_recent_version = true

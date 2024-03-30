@@ -1,0 +1,23 @@
+--* filtered_dps:
+--*   desc: Compute count of U09.9 usage at each site
+--*   ext: sql
+--*   inputs:
+--*   - condition_era_lda_pin
+--* 
+
+WITH counts as (SELECT 
+    data_partner_id, 
+    CASE 
+        WHEN condition_concept_id = 705076 THEN 1
+        ELSE 0
+    END as is_u09
+    FROM condition_era_lda_pin
+)
+
+SELECT 
+    data_partner_id,
+    sum(is_u09) as count_u09,
+    sum(1) as count_all,
+    sum(is_u09)/sum(1) as ratio_u09
+FROM counts
+GROUP BY data_partner_id

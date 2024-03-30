@@ -1,0 +1,16 @@
+--* person_topics_arrayify_long_epochs:
+--*   desc: Shape model output of topic predictions for patient-epochs for use.
+--*   ext: sql
+--*   inputs:
+--*   - person_topics_arrayify_epochs
+--* 
+
+-- Array columns are cool and all, but lets extract the topic probabilities out to individual rows, making the data "long"
+
+SELECT person_id, data_partner_id, posexplode(topic_dist_array) as (topic_index, topic_prob)
+FROM person_topics_arrayify_epochs
+
+-- there's also an explode() function which explodes an array to rows, but doesn't include an index column (which we want)
+-- eg
+-- SELECT person_id, explode(topic_dist_array) as topic_prob
+-- FROM person_topics_arrayify_epochs

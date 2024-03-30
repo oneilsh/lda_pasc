@@ -1,0 +1,18 @@
+--* cohort_and_idx2:
+--*   desc: Aggregates the various index dates per person. Original code by Emily Pfaff.
+--*   ext: sql
+--*   inputs:
+--*   - u07_ip_ed
+--*   - u07_any
+--*   - lab_pos
+--*   - mis_c
+--*   - u099
+--*   - person_union
+--* 
+
+SELECT pu.person_id, lp.pos_test_idx, ui.u07_ip_ed_idx, ua.u07_any_idx, u9.u099_idx, mc.m3581_idx
+FROM person_union pu LEFT JOIN u099 u9 ON pu.person_id = u9.person_id
+    LEFT JOIN mis_c mc ON pu.person_id = mc.person_id
+    LEFT JOIN u07_any ua ON pu.person_id = ua.person_id
+    LEFT JOIN u07_ip_ed ui ON pu.person_id = ui.person_id
+    LEFT JOIN lab_pos lp ON pu.person_id = lp.person_id

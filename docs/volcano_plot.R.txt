@@ -1,0 +1,222 @@
+#* volcano_plot:
+#*   desc: Volcano plot.
+#*   ext: R
+#*   inputs:
+#*   - fishers_results_cleaned
+#* 
+
+volcano_plot <- function(fishers_results_cleaned) {
+    library(ggplot2)
+    library(dplyr)
+    library(tidyr)
+    library(stringr)
+    library(ggrepel)
+    library(scales)
+    library(plotly)
+    library(ggpp)
+
+    concepts_df <- fishers_results_cleaned
+
+    first_n_words <- function(charvec, n = 6) {
+        charvec %>%
+            str_split(" +") %>% 
+            lapply(function(x) {
+                sub <- head(x, n); 
+                ifelse(length(x) > length(sub), 
+                            paste(c(sub, "..."), collapse = " "),
+                            paste(sub, collapse = " "))
+            }) %>% 
+            unlist()
+    }
+
+    concepts_df <-  concepts_df %>%
+        mutate(plot_label = first_n_words(concept_name)) 
+
+    covid <- concepts_df %>%
+        select(plot_label, 
+                    concept_name,
+                    concept_id,
+                    top_topic_name,
+                    sig_category,
+                    `pval_adj_covid-no-pasc`, 
+                    `estimate_covid-no-pasc`, 
+                    `conf_int_lower_covid-no-pasc`, 
+                    `conf_int_upper_covid-no-pasc`) %>%
+        rename(pval_adj = `pval_adj_covid-no-pasc`, 
+                    estimate = `estimate_covid-no-pasc`, 
+                    conf_int_lower = `conf_int_lower_covid-no-pasc`, 
+                    conf_int_upper = `conf_int_upper_covid-no-pasc`) %>%
+        mutate(cohort = "COVID+")
+
+    pasc <- concepts_df %>%
+        select(plot_label, 
+                    concept_name,
+                    concept_id,
+                    top_topic_name,
+                    sig_category,
+                    `pval_adj_pasc`, 
+                    `estimate_pasc`, 
+                    `conf_int_lower_pasc`, 
+                    `conf_int_upper_pasc`) %>%
+        rename(pval_adj = `pval_adj_pasc`, 
+                    estimate = `estimate_pasc`, 
+                    conf_int_lower = `conf_int_lower_pasc`, 
+                    conf_int_upper = `conf_int_upper_pasc`) %>%
+        mutate(cohort = "PASC+")
+
+    long <- rbind(covid, pasc) %>% 
+        mutate(plot_label = str_wrap(plot_label, width = 16))
+    str(long)
+
+    ensure_extra_names <- c(
+        "Cognitive communication disorder",
+        "Disorder of autonomic nervous system",
+        "Elevated C-reactive protein",
+        "Disorder of immune function",
+        "Lymphocytopenia",
+        "Hypogammaglobulinemia",
+        "Adrenal cortical hypofunction",
+        "Mycosis",
+        "Cytomegalovirus infection",
+        "Impaired cognition",
+        "Orthostatic hypotension",
+        "Amnesia",
+        "Polyneuropathy",
+        "Irregular periods",
+        "Excessive and frequent menstruation",
+        "Abnormal menstrual cycle",
+        "Cardiomegaly"
+        )
+
+    drop_extra <- c(
+        "Malignant neoplasm of lower respiratory tract",
+        "Finding related to ability to move",
+        "Acute on chronic hypoxemic respiratory failure",
+        "Non-rheumatic mitral regurgitation",
+        "Blood chemistry abnormal",
+        "Taste sense altered",
+        "Viral gastroenteritis due to Norwalk-like agent",
+        "Blood chemistry abnormal",
+        "Nervous system symptoms",
+        "Taste sense altered",
+        "Tracheostomy present",
+        "Pulmonary function studies abnormal",
+        "Relapsing fever",
+        "Low blood pressure",
+        "Dizziness and giddiness",
+        "Myocardial dysfunction",
+        "Subacute disease",
+        "Osteopenia",
+        "Acute sinusitis",
+        "Osteoarthritis",
+        "Coronavirus infection",
+        "Upper respiratory tract infection due to Influenza",
+        "Myocarditis due to infectious agent",
+        "Acute respiratory failure",
+        "Impaired cognition",
+        "Amnesia",
+        "Reduced mobility",
+        "Multiple pressure ulcers",
+        "Sore throat symptom",
+        "Postoperative state",
+        "Telogen effluvium",
+        "Congestive heart failure"
+
+    )
+    
+    ensure_names_df <- long %>%
+            filter( (cohort == "COVID+" & (pval_adj < 1e-20 | estimate > 2 | estimate < 0.4)) |
+                    (cohort == "PASC+" & (pval_adj < 1e-20 | estimate > 10 | estimate < 1)) |
+                    (concept_name %in% ensure_extra_names) ) %>%
+            filter(!concept_name %in% drop_extra) %>%
+            select(concept_id, cohort) %>%
+            mutate(plot = TRUE)
+            
+    
+    plot_long <- long %>% 
+        filter(!is.infinite(estimate) & estimate != 0) %>%
+        filter(pval_adj < 0.05) %>%
+        merge(ensure_names_df, all.x = TRUE) %>%
+        #merge(extra_ensure_concept_ids, all.x = TRUE) %>%
+        mutate(plot_label = ifelse(plot == TRUE, 
+                                   plot_label, 
+                                   NA)) %>%
+        mutate(pval_adj = ifelse(pval_adj < 1e-100, 
+                                 1e-100, 
+                                 pval_adj)) #%>%
+
+    log10_rev_trans <- trans_new(
+        "log10_rev",
+        function(x) log10(rev(x)),
+        function(x) rev(10 ^ (x)),
+        log_breaks(10),
+        domain = c(1e-100, Inf)
+    )
+
+    p <- ggplot(plot_long) +
+        geom_vline(xintercept = 1, size = 0.8, color = "blue", alpha = 0.6, linetype = "dashed") +
+        geom_point(aes(x = estimate, 
+                                    y = pval_adj, 
+                                    #text = paste(plot_label, concept_id) # for ggplotly exploration
+                                    color = cohort,
+                                    text = plot_label
+                                    #size = 0.4
+                                    ),
+                            alpha = 0.75) +
+        #theme_bw() +
+        geom_label_repel(aes(x = estimate,
+                                    y = pval_adj,
+                                    label = plot_label),
+                        segment.alpha = 0.6,
+                        hjust = 0.5,
+                        max.overlaps = 30,
+                        #nudge_x = 1*sign(log10(plot_long$estimate)),
+                        #nudge_y = 0.25 * log10((df_filtered$`estimate_covid-no-pasc` / 1.2)),
+                        #force_pull = 0.1,
+                        #position = position_nudge_center(x = 1, y = 0, center_x = 1, kept.origin = "none"),
+                        force = 4,
+                        lineheight = 0.9,
+                        min.segment.length = 0,
+                        label.size = 0.0,
+                        box.padding = 0.16,
+                        label.padding = 0.2,
+                        alpha = 0.8,
+                        #    fill = alpha(c("white"),0.3),
+                        segment.size = 0.3,
+                        # segment.curvature = 0.2,
+                        # segment.ncp = 1,
+                        # segment.angle = 45,
+                        size = 2.5,
+                        max.iter = 100000,
+                        max.time = 10
+                    ) +
+
+        scale_x_continuous(name = "Odds Ratio Estimate",
+                                            trans = "log10",
+                                            breaks = c(0.1, 1, 10, 100, 1000),
+                                            labels = c(0.1, 1, 10, 100, 1000),
+                                            limits = c(0.01, 5000)) +
+        scale_y_continuous(name = "p-Value (Bonferroni Adjusted)",
+                                            trans = c("log10", "reverse"), # requires scales v 1.2+
+                                            breaks = c(10 ^ seq(-100, -1, by = 10), 0.05),
+                                            labels = c(10 ^ seq(-100, -1, by = 10), 0.05),
+                                            limits = c(1e12, 1e-115)) +
+        #coord_trans(y = log10_rev_trans) +
+        facet_wrap(~ cohort) +
+        annotation_logticks(sides = "b") +
+        theme(legend.position = "none")
+
+    p2 <- ggplotly(p)
+    
+    # image: svg
+    svg(
+      filename=graphicsFile,
+      width=1.5 * 8,
+      height=1.0 * 8,
+      #pointsize=2,
+      bg="white")
+
+    plot(p)
+
+    return(plot_long)
+}

@@ -1,0 +1,34 @@
+#* model_tests_covid_pvals:
+#*   desc: Runs multiple test correction on all the model results. For models that diverged,
+#*     resulting in nonsense odds ratio estimates, the p-values are replaced by NA prior
+#*     to correction.
+#*   ext: R
+#*   inputs:
+#*   - model_tests_covid_gapplyCollect
+#* 
+
+library(dplyr)
+
+model_tests_covid_pvals <- function( model_tests_covid_gapplyCollect) {
+    df <- model_tests_covid_gapplyCollect
+
+    # some topics the model diverged (small groups being fully seperable)
+    # we don't want to drop them altogether (or we'd lose the facet in later plots), just
+    # replace entries with NA so the lines/points aren't plotted
+    failed_convergence_topics <- df %>% 
+                                 filter(abs(estimate) > 1000) %>%
+                                 pull(topic_name) %>%
+                                 unique()
+    
+    df <- df %>%
+        mutate(p_value = ifelse(topic_name %in% failed_convergence_topics, NA, p_value)) %>%
+        mutate(estimate = ifelse(topic_name %in% failed_convergence_topics, NA, estimate)) %>%
+        mutate(asymp_LCL = ifelse(topic_name %in% failed_convergence_topics, NA, asymp_LCL)) %>%
+        mutate(asymp_UCL = ifelse(topic_name %in% failed_convergence_topics, NA, asymp_UCL)) %>%
+
+        # some of the p-values are now NA, and the correction handles NA's by... help(p.adjust)
+        mutate(p_adj = p.adjust(p_value, method = "holm")) %>%
+        mutate(p_adj_small = ifelse(p_adj < 0.05, TRUE, FALSE))
+
+    return(df)
+}

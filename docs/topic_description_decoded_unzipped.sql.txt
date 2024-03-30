@@ -1,0 +1,17 @@
+--* topic_description_decoded_unzipped:
+--*   desc: Join nicer topic names to the topic descriptions.
+--*   ext: sql
+--*   inputs:
+--*   - topic_description_decoded_zipped
+--*   - topic_names
+--* 
+
+-- unpack the struct col and join in the topic names
+
+SELECT topic_description_decoded_zipped.topic as topic_index, 
+       topic_description_decoded_zipped.topicTermIndex,
+       topic_description_decoded_zipped.topicInfoStructs,
+       topic_names.topic_name
+FROM topic_description_decoded_zipped
+JOIN topic_names ON 
+topic_names.topic_index = topic_description_decoded_zipped.topic

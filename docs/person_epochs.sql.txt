@@ -1,0 +1,14 @@
+--* person_epochs:
+--*   desc: From the defined epochs (which also encode cohort), extract just the epoch
+--*     name and info.
+--*   ext: sql
+--*   inputs:
+--*   - person_cohort_epoch_definitions
+--* 
+
+SELECT DISTINCT
+    person_id,
+    split(epoch_name, ':')[1] as epoch,
+    epoch_start,
+    epoch_end
+FROM person_cohort_epoch_definitions

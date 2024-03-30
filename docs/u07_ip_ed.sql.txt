@@ -1,0 +1,29 @@
+--* u07_ip_ed:
+--*   desc: Identifies the first date of a COVID diagnosis in an inpatient of emergency
+--*     department setting). Original code by Emily Pfaff.
+--*   ext: sql
+--*   inputs:
+--*   - condition_occurrence_lda_pin
+--*   - ed_concepts
+--*   - conditions_to_microvisits_lda_pin
+--*   - microvisit_to_macrovisit_lds_lda_pin
+--* 
+
+--patients with U07.1 and an index date (first dx date) at IP visit
+select person_id, min(condition_start_date) as u07_ip_ed_idx
+from (
+--IP visits
+SELECT co.person_id, co.condition_start_date
+FROM condition_occurrence_lda_pin co JOIN conditions_to_microvisits_lda_pin conm ON co.condition_occurrence_id = conm.condition_occurrence_id
+    JOIN microvisit_to_macrovisit_lds_lda_pin m ON conm.macrovisit_id = m.macrovisit_id
+WHERE co.condition_concept_id = 37311061 
+
+UNION
+
+--ED visits
+SELECT co.person_id, co.condition_start_date
+FROM condition_occurrence_lda_pin co JOIN microvisit_to_macrovisit_lds_lda_pin m ON co.visit_occurrence_id = m.visit_occurrence_id
+    JOIN ed_concepts ed ON m.visit_concept_id = ed.concept_id
+WHERE co.condition_concept_id = 37311061 
+)
+group by person_id

@@ -1,0 +1,12 @@
+--* all_person_facts_epoch_analysis:
+--*   desc: Select only patients in the validate and test datasets and in a valid cohort
+--*     (validate/test selection made later for different uses).
+--*   ext: sql
+--*   inputs:
+--*   - person_all_facts
+--* 
+SELECT *
+FROM Person_all_facts
+WHERE -- set IN ('validate', 'test') AND 
+  cohort_simple IS NOT NULL
+  

@@ -1,0 +1,11 @@
+--* conditions_to_microvisits_lda_pin:
+--*   desc: Filters conditions-to-visits table by kept sites.
+--*   ext: sql
+--*   inputs:
+--*   - conditions_to_microvisits
+--*   - keep_sites
+--* 
+
+SELECT conditions_to_microvisits.*
+FROM conditions_to_microvisits
+INNER JOIN keep_sites ON keep_sites.data_partner_id = conditions_to_microvisits.data_partner_id

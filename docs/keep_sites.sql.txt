@@ -1,0 +1,21 @@
+--* keep_sites:
+--*   desc: Identifies the sites passing quality checks
+--*   ext: sql
+--*   inputs:
+--*   - Release_Version_Person
+--* 
+
+-- I was quite tired of not having named branches for release versions for OMOP tables - so I was using
+-- the sites_whitelist (master) and filtering the original LDS data based on the kept data partners
+-- now though we DO have named branches for OMOP tables, but not for the sites whitelist!
+-- so to generate the list of sites whitelisted by the release versions (and not change up the code here)
+-- I will just use the Release Version Person table and select the distinct data partners kept in it
+
+-- pinning to master for concept_set_members, since it's only added to
+-- just to keep all inputs flowing through this workbook
+
+-- concept is on a pinned branch tho
+
+SELECT 
+    DISTINCT data_partner_id
+FROM Release_Version_Person

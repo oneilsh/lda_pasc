@@ -1,0 +1,41 @@
+--* fishers_results_top_topics:
+--*   desc: This just joins in, for each concept_id upstream, which topic it was most
+--*     relevant in (not used in current analysis).
+--*   ext: sql
+--*   inputs:
+--*   - better_fisher_tests
+--*   - OUTPUT_topic_descriptions
+--* 
+
+-- this just joins in, for each concept_id upstream, which topic it was most relevant in
+
+WITH topic_descriptions_filtered AS (
+    SELECT
+        OUTPUT_topic_descriptions.*
+    FROM OUTPUT_topic_descriptions
+    INNER JOIN better_fisher_tests ON OUTPUT_topic_descriptions.concept_id = better_fisher_tests.concept_id
+),
+
+with_row_nums AS (
+    SELECT 
+        *,
+        row_number() OVER (PARTITION BY concept_id ORDER BY relevance DESC) as row_num
+    FROM topic_descriptions_filtered
+    ORDER BY concept_id
+),
+
+concept_topic_map AS (
+    SELECT 
+        concept_id,
+        topic_name,
+        term_weight
+    FROM with_row_nums
+    WHERE row_num = 1
+)
+
+SELECT /*+ COALESCE(1) */
+    better_fisher_tests.*,
+    concept_topic_map.topic_name,
+    concept_topic_map.term_weight
+FROM better_fisher_tests
+INNER JOIN concept_topic_map ON better_fisher_tests.concept_id = concept_topic_map.concept_id

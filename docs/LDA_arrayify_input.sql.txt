@@ -1,0 +1,13 @@
+--* LDA_arrayify_input:
+--*   desc: Shapes data into arrays of concept_ids for model training.
+--*   ext: sql
+--*   inputs:
+--*   - INPUT_persons_datapartners_concepts
+--* 
+
+-- we're going to need the concepts for each person_id
+-- in a single array-column entry
+
+SELECT person_id, data_partner_id, collect_list(string(concept_id)) as concept_ids, hold_out
+FROM INPUT_persons_datapartners_concepts
+GROUP BY person_id, data_partner_id, hold_out

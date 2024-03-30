@@ -1,0 +1,11 @@
+--* manifest_lda_pin:
+--*   desc: Filters data partner manifest table by kept sites.
+--*   ext: sql
+--*   inputs:
+--*   - manifest
+--*   - keep_sites
+--* 
+
+SELECT manifest.*
+FROM manifest
+INNER JOIN keep_sites ON keep_sites.data_partner_id = manifest.data_partner_id

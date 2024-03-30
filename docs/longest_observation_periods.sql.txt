@@ -1,0 +1,31 @@
+--* longest_observation_periods:
+--*   desc: For each patient, identifies the length in days (and start/end date) of the
+--*     longest observation period.
+--*   ext: sql
+--*   inputs:
+--*   - observation_period_lda_pin
+--* 
+
+WITH lengths_added AS (
+    SELECT 
+        datediff(observation_period_end_date, observation_period_start_date) as length,
+        *
+    FROM observation_period_lda_pin
+),
+
+with_index AS (
+    SELECT
+        row_number() OVER (PARTITION BY person_id ORDER BY length DESC) as length_index,
+        *
+    FROM lengths_added
+)
+
+SELECT
+    with_index.person_id, 
+    with_index.data_partner_id,
+    with_index.observation_period_start_date,
+    with_index.observation_period_end_date,
+    with_index.length
+FROM with_index
+WHERE with_index.length_index = 1
+    

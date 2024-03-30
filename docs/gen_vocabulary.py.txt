@@ -1,0 +1,44 @@
+#* gen_vocabulary:
+#*   desc: Generate the vocabulary over all the data covering all used concept_ids, for
+#*     later use in model training and usage.
+#*   ext: py
+#*   inputs:
+#*   - LDA_arrayify_input
+#* 
+
+# here we use the vocab-generator and return just the python list containing the vocabulary generated
+# by the vectorizer
+
+from pyspark.ml.feature import CountVectorizer
+
+def gen_vocabulary(LDA_arrayify_input):
+    cv = CountVectorizer(inputCol = "concept_ids", outputCol = "concept_vector", binary = False, maxDF = 0.999999999)
+    
+    # fit it to the data to count the vocab term use
+    cvmodel = cv.fit(LDA_arrayify_input)
+
+    vocab = cvmodel.vocabulary 
+    # its just a list of the terms from most-frequent to least
+    print(vocab)
+
+    # so we need to return it via to_pickle()
+    return to_pickle(vocab)
+
+#################################################
+## Global imports and functions included below ##
+#################################################
+
+import pickle
+
+def to_pickle(data):
+    output = Transforms.get_output()
+    output_fs = output.filesystem()
+    
+    with output_fs.open('data.pickle', 'wb') as f: 
+        pickle.dump(data, f)
+
+def from_pickle(transform_input):
+    with transform_input.filesystem().open('data.pickle', 'rb') as f:    
+        data = pickle.load(f)
+
+    return data

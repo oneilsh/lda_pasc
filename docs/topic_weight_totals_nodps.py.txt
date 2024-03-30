@@ -1,0 +1,18 @@
+#* topic_weight_totals_nodps:
+#*   desc: Does nothing actually - holdover from previous code that masked site IDs at
+#*     this point.
+#*   ext: py
+#*   inputs:
+#*   - topic_weight_totals
+#* 
+
+import pyspark.sql.functions as F
+from pyspark.sql.types import IntegerType,BooleanType,DateType,StringType
+
+def topic_weight_totals_nodps(topic_weight_totals):
+    enabled = False
+    if enabled:
+        munged = topic_weight_totals.withColumn('data_partner_id', F.sha2(F.concat(topic_weight_totals.data_partner_id.cast(StringType()), F.lit('seed')), 256).substr(0, 3))
+        return munged
+    else:
+        return topic_weight_totals

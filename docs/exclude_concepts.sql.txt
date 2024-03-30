@@ -1,0 +1,38 @@
+--* exclude_concepts:
+--*   desc: Defines the set of concept_ids to exclude from the data; a few specific ones,
+--*     and anything not in the condition domain.
+--*   ext: sql
+--*   inputs:
+--*   - concept_lda_pin
+--*   - concept_set_members_lda_pin
+--* 
+
+-- here we define concepts to filter out
+-- variations of Findings of Sexual Activity (used by one only data partner that still passes QC)
+-- COVID-19 itself (this has a large effect, when present it acts like an attractor, collapsing various COVID-related subtopic)
+-- boring concepts (clinical finding etc.)
+-- anything in the OMOP Concept table that isnt in the "condition" domain 
+--  (some OMOP sites apparently add non-condition concepts into here erroneously)
+
+    (
+    SELECT concept_id, concept_name
+    FROM concept_set_members_lda_pin
+    WHERE codeset_id = 192528259 -- Findings of Sexual Activity (one of these is an Observation, so it will be duplicated with hte third group below)
+    )
+UNION ALL
+    (
+    SELECT concept_id, concept_name
+    FROM concept_lda_pin
+    WHERE concept_id = 441840   -- clinical finding
+    OR concept_id = 0        -- no matching Concept
+    OR concept_id = 37311061 -- COVID-19
+    OR concept_id = 4086701  -- no abnormality detected
+    OR concept_id = 440029 -- viral disease
+    OR concept_id = 4100065 -- disease due to coronaviridae
+    )
+UNION ALL
+    (
+    SELECT concept_id, concept_name
+    FROM concept_lda_pin
+    WHERE domain_id != 'Condition'
+    )

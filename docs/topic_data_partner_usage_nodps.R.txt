@@ -1,0 +1,246 @@
+#* topic_data_partner_usage_nodps:
+#*   desc: Plot relative topic usage across data partners with masked site IDs.
+#*   ext: R
+#*   inputs:
+#*   - masked_topic_weight_totals_nodps
+#*   - masked_data_partner_cdms
+#* 
+
+topic_data_partner_usage_nodps <- function( masked_topic_weight_totals_nodps, masked_data_partner_cdms) {
+    ### Params
+    #topic_correlations <- topic_correlations
+    topic_weight_totals <- masked_topic_weight_totals_nodps
+    print(head(topic_weight_totals))
+    topic_distance_metric <- "Jensen-Shannon"
+    order_topics_method <- "Topic Name/Usage" # Seriate, Topic Name/Usage
+    order_data_partners_method <- "Seriate" # Seriate, Data Partner Name
+    topic_name_font_size <- 4
+    data_partner_name_font_size <- 4
+    # seriation methods have some randomness - let's not, 'tis confusing
+    set.seed(42)
+
+    # make data partner id character
+    topic_weight_totals$data_partner_id <- as.character(topic_weight_totals$data_partner_id)
+    # we don't need topic_index
+    topic_weight_totals <- select(topic_weight_totals, -topic_index)
+
+    # topic_correlations <- select(topic_correlations, -topici_index, -topicj_index)
+    # 
+    # # compute distance 
+    # if(topic_distance_metric == "Jensen-Shannon") {
+    #     topic_correlations$metric <- 1 - sqrt(topic_correlations$js_div)
+    # } else {
+    #     topic_correlations$metric <- topic_correlations$corr
+    # }
+
+    # # perfect correlations only happen for self-compares, and blow the scale, so set them NA
+    # topic_correlations$metric[topic_correlations$metric == 1] <- NA
+
+    # # compute similarity matrix and set rownames
+    # longish <- topic_correlations %>%
+    #   select(topici_name, topicj_name, metric) %>%
+    #   pivot_wider(names_from = topicj_name, values_from = metric) %>% 
+    #   set_rownames(.$topici_name) %>%
+    #   select(-topici_name)
+
+    # mat <- as.matrix(longish)
+    # colnames(mat) <- colnames(longish)
+    # rownames(mat) <- rownames(longish)
+    # mat <- mat[order(rownames(mat)), order(rownames(mat))]
+
+    ave_weight_by_topic <- topic_weight_totals %>% 
+      group_by(topic_name) %>% 
+      summarize(topic_sum_weight = sum(topic_sum_weight)) %>%
+      arrange(topic_name)
+
+    
+    # top_annotations <- HeatmapAnnotation(Usage = anno_barplot(ave_weight_by_topic$topic_sum_weight, 
+    #                                                           border = FALSE, 
+    #                                                           axis = FALSE),
+    #                                      annotation_name_side = c(Usage = "left"), 
+    #                                      annotation_name_gp = gpar(fontsize = 10, fontface = "bold"))
+
+    # left_annotations <- rowAnnotation(Usage = anno_barplot(ave_weight_by_topic$topic_sum_weight, 
+    #                                                        axis_param = list(direction = "reverse"), 
+    #                                                        border = FALSE, 
+    #                                                        axis = FALSE), 
+    #                                                        show_annotation_name = c(Usage = FALSE))
+
+    if(order_topics_method == "Seriate") {
+        # see complexheatmap manual and http://nicolas.kruchten.com/content/2018/02/seriation/
+        ordering <- seriate(dist(mat), method = "TSP")
+        topic_ordering = names(ordering[[1]])
+    } else  {
+        topic_ordering = str_sort(ave_weight_by_topic$topic_name, numeric = TRUE) 
+    } 
+
+    
+    # # spectral
+    # metric_min <- min(topic_correlations$metric, na.rm = TRUE)
+    # metric_max <- max(topic_correlations$metric, na.rm = TRUE)
+    # col_fun <- colorRamp2(seq(metric_min, metric_max, length.out = 7), rev(brewer.pal(n = 7, name = "Spectral")))
+
+    # map <- Heatmap(mat, 
+    #                name = "Topic Similarity",
+    #                col = col_fun, 
+    #                column_title = "Topic Similarity", 
+    #                rect_gp = gpar(col = "white", lwd = 1),
+    #                column_names_gp = gpar(fontsize = topic_name_font_size),
+    #                row_names_gp = gpar(fontsize = topic_name_font_size),
+    #                row_names_side = "left",
+    #                row_order = topic_ordering,
+    #                column_order = topic_ordering,
+    #                top_annotation = top_annotations,
+    #                left_annotation = left_annotations, 
+    #                height = unit(10, "cm"), 
+    #                width = unit(10, "cm"))
+
+    ### data partner breakouts
+    norm_weight <- function(df) {
+        df$normed_weight <- df$topic_sum_weight/sum(df$topic_sum_weight)
+        return(df)
+    }
+    print(head(topic_weight_totals))
+
+    data_partner_normed_long <- topic_weight_totals %>% 
+      group_by(data_partner_id) %>%
+      do(norm_weight(.)) %>%
+      select(-topic_sum_weight)
+      
+    data_partner_normed_wide <- data_partner_normed_long %>%
+      pivot_wider(names_from = data_partner_id, values_from = normed_weight) %>%
+      as.data.frame() %>%
+      set_rownames(., .$topic_name) %>%
+      select(-topic_name)
+
+    mat <- as.matrix(data_partner_normed_wide)
+    rownames(mat) <- rownames(data_partner_normed_wide)
+    colnames(mat) <- colnames(data_partner_normed_wide)
+    mat <- mat[order(rownames(mat)), order(colnames(mat))]
+
+    if(order_data_partners_method == "Seriate") {
+        ordering <- seriate(mat, method = "BEA_TSP")
+        dp_ordering <- names(ordering[[2]]) 
+    } else {
+        dp_ordering <- str_sort(colnames(mat), numeric = TRUE) 
+    }    
+
+    # for color mapping CDMs
+    unique_cdms <- unique(masked_data_partner_cdms$cdm_name)
+    cdm_colors <- brewer.pal(n = length(unique_cdms), name = "Set2")
+    names(cdm_colors) <- unique_cdms
+
+    # for ordering CDM annotation same as the matrix
+    cdm_names <- masked_data_partner_cdms$cdm_name
+    names(cdm_names) <- masked_data_partner_cdms$data_partner_id
+    cdm_annotation = columnAnnotation(CDM = cdm_names[colnames(mat)], col = list(CDM = cdm_colors))
+
+    ## This data has some outliers but we still want to see the bulk of range below 0.1, hence the weird color scale
+    top_95th <- quantile(data_partner_normed_long$normed_weight, 0.95)
+    top_100th <- max(data_partner_normed_long$normed_weight)
+    col_fun_data_partner <- colorRamp2(c(0, top_95th, top_95th + 1e-7, top_100th), c("blue", "orange", "orange", "red"))
+
+    row_labels <- rownames(mat)
+    col_labels <- colnames(mat)
+    column_names_rot <- 90
+
+    row_topic_index <- as.integer(gsub("^T-(\\d+) .+$", "\\1", rownames(mat)))
+
+    row_labels_fix <- paste0(rownames(mat), " \u2014") 
+    row_labels <- row_labels_fix
+    row_labels[row_topic_index %% 10 != 0] <- "\u2014"
+    row_labels[row_topic_index %% 5 != 0 & 
+            row_topic_index %% 10 != 0] <- "-"
+    # always label #1, but use a short tic
+    row_labels[which.min(row_topic_index)] <- paste0(rownames(mat), " -")[which.min(row_topic_index)]
+    #row_labels[which.max(row_topic_index)] <- row_labels_fix[which.max(row_topic_index)]
+
+    data_partner_map <- Heatmap(mat,
+                   name = "Data Partner Usage",
+                   column_title = "Data Partner Topic Usage", 
+                   col = col_fun_data_partner, 
+                   rect_gp = gpar(col = "white", lwd = 0.5),
+                   row_labels = row_labels,
+                   column_labels = col_labels,
+                   column_order = dp_ordering,
+                   column_names_gp = gpar(fontsize = 6),
+                   row_names_gp = gpar(fontsize = 10),
+                   row_names_side = "left",
+                   row_order = rev(topic_ordering),
+                   width = unit(12, "cm"),
+                   height = unit(18, "cm"),
+                   heatmap_legend_param = list(title = "Data Partner\n Relative Usage", 
+                                               col_fun = col_fun_data_partner),
+                   bottom_annotation = cdm_annotation
+                )
+
+    draw(data_partner_map, merge_legend = TRUE)
+    
+    # for plotting again later
+    grob = grid.grabExpr(draw(data_partner_map)) 
+
+    return(to_rdata(grob))
+}
+
+#################################################
+## Global imports and functions included below ##
+#################################################
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(magrittr)
+library(ComplexHeatmap)
+library(circlize)
+library(RColorBrewer)
+library(seriation)
+
+to_rdata <- function(data) {
+    output <- new.output()
+    output_fs <- output$fileSystem()
+    saveRDS(data, output_fs$get_path("data.rds", 'w'))
+}
+
+from_rdata <- function(data) {
+    fs <- data$fileSystem()
+        
+    path <- fs$get_path("data.rds", 'r')
+    rds <- readRDS(path)
+    return(rds)
+}
+
+int64fix <- function(df) {
+    is_int64 <- function(x) {
+        "integer64" %in% class(x)
+    }
+    needs_fix <- lapply(df, is_int64) %>% unlist()
+    df[needs_fix] <- lapply(df[needs_fix], as.integer)
+    return(df)
+}
+
+`%+%` <- function(a, b) {
+    paste0(a, b)
+}
+
+# rotates a vector so the smallest entry is first
+# was trying to use with seriation to get more repeatable orderings,
+# but seriation isn't quite as wrap-around as I thought, handy function to
+# keep somewhere though...
+#rotate_to_first <- function(v) {
+#  first <- str_sort(v, numeric = TRUE)[1]
+#  first_index_adj <- which(v == first)[1] - 2
+#  rotated <- v[(1:length(v) + first_index_adj) %% length(v) + 1]
+#  return(rotated)
+#}
+
+first_n_words <- function(charvec, n = 6) {
+    charvec %>%
+    str_split(" +") %>% 
+    lapply(function(x) {
+        sub <- head(x, n); 
+        ifelse(length(x) > length(sub), 
+               paste(c(sub, "..."), collapse = " "),                    paste(sub, collapse = " "))
+        }) %>% 
+    unlist()
+}

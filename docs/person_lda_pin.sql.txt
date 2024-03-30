@@ -1,0 +1,11 @@
+--* person_lda_pin:
+--*   desc: Filters OMOP person table by kept sites.
+--*   ext: sql
+--*   inputs:
+--*   - person
+--*   - keep_sites
+--* 
+
+SELECT person.*
+FROM person
+INNER JOIN keep_sites ON keep_sites.data_partner_id = person.data_partner_id

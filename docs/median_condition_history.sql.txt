@@ -1,0 +1,25 @@
+--* median_condition_history:
+--*   desc: From the set of cleaned conditions, defines a median date as the middle of
+--*     their first / last conditions (not used in current analysis).
+--*   ext: sql
+--*   inputs:
+--*   - condition_era_full_clean
+--* 
+
+-- first get the minimum and maximum dates known
+WITH min_max AS (
+    SELECT 
+        person_id,
+        min(condition_era_start_date) as min_date,
+        max(condition_era_end_date) as max_date
+    FROM condition_era_full_clean
+    GROUP BY person_id
+)
+
+-- then we want the middle date
+SELECT 
+    person_id, 
+    min_date,
+    max_date,
+    date_add(min_date, int(datediff(max_date, min_date) / 2)) as median_condition_history
+FROM min_max

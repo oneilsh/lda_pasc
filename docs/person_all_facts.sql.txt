@@ -1,0 +1,119 @@
+--* person_all_facts:
+--*   desc: Aggregate lots of useful facts about patients. This also defines patients'
+--*     life stage, index wave, and race and ethnicity categorization.
+--*   ext: sql
+--*   inputs:
+--*   - person_cohorts
+--*   - person_table_sets
+--*   - epoch_stats_wide
+--*   - Charleson_scores_long_covid
+--*   - full_condition_history_stats
+--*   - Ll_all_patients_fact_table
+--* 
+
+WITH most_info AS (
+    SELECT 
+        person_table_sets.person_id,
+        person_table_sets.data_partner_id,
+        string(person_table_sets.data_partner_id) as data_partner_id_string,
+        person_table_sets.set,
+
+        person_cohorts.cohort,
+        person_cohorts.cohort_simple,
+
+        person_table_sets.birth_date,
+        -- for age at index we need the index; this will be pre_last_date, if it exists (not all patients have a pre epoch, but 
+        -- all do have an index if they are in a cohort), if not acute_first_date will work, but not all cohorts have an acute
+        -- epoch; so we fall back to post_first_date - we can't just use post_first_date as if the patient has an acute
+        -- epoch then that's not the index date. whew
+        -- even so, this can still be NULL if there's no birth date
+        int((datediff(epoch_stats_wide.index_date, 
+                    person_table_sets.birth_date) + 1)/365.25) 
+            as age_at_index,
+
+        epoch_stats_wide.index_date,
+        --epoch_stats_wide.index_quantile,
+
+        CASE
+            WHEN person_table_sets.gender_concept_name IN ('MALE', 'FEMALE') THEN person_table_sets.gender_concept_name
+            ELSE NULL
+        END as gender,
+
+        CASE
+            WHEN person_table_sets.race_concept_name IN ('White', 'Black or African American', 'Asian or Pacific islander', 
+                                                            'Native Hawaiian or Other Pacific Islander') THEN person_table_sets.race_concept_name
+            WHEN person_table_sets.race_concept_name = 'Black' THEN 'Black or African American'
+            WHEN person_table_sets.race_concept_name = 'Asian' THEN 'Asian or Pacific islander'
+            WHEN person_table_sets.race_concept_name = 'Other Pacific Islander' THEN 'Native Hawaiian or Other Pacific Islander'
+            ELSE 'Other or Unknown'
+        END as race,
+
+        CASE
+            WHEN person_table_sets.ethnicity_concept_name IN ('Hispanic or Latino', 'Not Hispanic or Latino') 
+                THEN person_table_sets.ethnicity_concept_name
+            ELSE 'Other or Unknown'
+        END as ethnicity,
+
+        Charleson_scores_long_covid.cci_score_quan,
+
+        Ll_all_patients_fact_table.BMI_max_observed_or_calculated,
+        Ll_all_patients_fact_table.cdm_name,
+
+        epoch_stats_wide.pre_first_date,
+        epoch_stats_wide.pre_last_date,
+        epoch_stats_wide.pre_num_condition_eras,
+        epoch_stats_wide.pre_epoch_effective_days,
+
+        epoch_stats_wide.acute_first_date,
+        epoch_stats_wide.acute_last_date,
+        epoch_stats_wide.acute_num_condition_eras,
+        epoch_stats_wide.acute_epoch_effective_days,
+
+        epoch_stats_wide.post_first_date,
+        epoch_stats_wide.post_last_date,
+        epoch_stats_wide.post_num_condition_eras,
+        epoch_stats_wide.post_epoch_effective_days,
+        full_condition_history_stats.total_history_conditions,
+        full_condition_history_stats.total_history_conditions_unique,
+        full_condition_history_stats.unique_history_conditions_ratio,
+        full_condition_history_stats.min_history_condition_date,
+        full_condition_history_stats.max_history_condition_date,
+        full_condition_history_stats.total_history_condition_days
+
+        
+
+    FROM person_table_sets
+    LEFT OUTER JOIN person_cohorts ON person_cohorts.person_id = person_table_sets.person_id
+    LEFT OUTER JOIN epoch_stats_wide ON epoch_stats_wide.person_id = person_table_sets.person_id
+    LEFT OUTER JOIN Ll_all_patients_fact_table ON Ll_all_patients_fact_table.person_id = person_table_sets.person_id
+    LEFT OUTER JOIN Charleson_scores_long_covid ON Charleson_scores_long_covid.person_id = person_table_sets.person_id
+    LEFT OUTER JOIN full_condition_history_stats ON full_condition_history_stats.person_id = person_table_sets.person_id
+)
+
+SELECT /*+ COALESCE(6) */
+    *,
+    CASE
+        WHEN age_at_index = 0 THEN 'infant'
+        WHEN age_at_index <= 3 THEN 'toddler'
+        WHEN age_at_index <= 18 THEN 'adolescent'
+        WHEN age_at_index <= 65 THEN 'adult'
+        WHEN age_at_index IS NULL THEN NULL
+        ELSE 'senior'
+    END as life_stage,
+    
+    CASE
+        WHEN age_at_index <= 10 THEN 'pediatric'
+        WHEN age_at_index <= 18 THEN 'adolescent'
+        WHEN age_at_index <= 65 THEN 'adult'
+        WHEN age_at_index IS NULL THEN NULL
+        ELSE 'senior'
+    END as life_stage_simple,
+
+    CASE
+        WHEN index_date < date('2021-03-01') THEN 'early'
+        WHEN index_date < date('2021-07-01') THEN 'alpha'
+        WHEN index_date < date('2022-01-01') THEN 'delta'
+        WHEN index_date IS NULL THEN NULL
+        ELSE 'omicron'
+    END as index_wave
+FROM most_info

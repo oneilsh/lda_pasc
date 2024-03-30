@@ -1,0 +1,13 @@
+#* topic_clouds_2:
+#*   desc: Topic cloud plot.
+#*   ext: R
+#*   inputs:
+#*   - top_1000_terms_per_topic
+#* 
+
+topic_clouds_2 <- function( top_1000_terms_per_topic) {
+
+  plot_topic_clouds(top_1000_terms_per_topic, 42*1 + (1:42))
+
+  return(NULL)
+}

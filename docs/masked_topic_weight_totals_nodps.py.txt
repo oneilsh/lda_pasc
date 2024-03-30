@@ -1,0 +1,18 @@
+#* masked_topic_weight_totals_nodps:
+#*   desc: Psuedorandomly mask site IDs in topic weight totals to match other psuedorandom
+#*     IDs.
+#*   ext: py
+#*   inputs:
+#*   - topic_weight_totals_nodps
+#* 
+
+import pyspark.sql.functions as F
+from pyspark.sql.types import IntegerType,BooleanType,DateType,StringType
+
+def masked_topic_weight_totals_nodps(topic_weight_totals_nodps):
+    enabled = True
+    if enabled:
+        munged = topic_weight_totals_nodps.withColumn('data_partner_id', F.sha2(F.concat(topic_weight_totals_nodps.data_partner_id.cast(StringType()), F.lit('seed')), 256).substr(0, 3))
+        return munged
+    else:
+        return topic_weight_totals_nodps

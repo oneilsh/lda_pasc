@@ -1,0 +1,42 @@
+#* vectorize_concepts_epochs:
+#*   desc: Shaping for model prediction.
+#*   ext: py
+#*   inputs:
+#*   - LDA_arrayify_input_epochs
+#*   - gen_vocabulary
+#* 
+
+# now we can do part 2 of the vectorization process, using the vocab list to generate the term usage vectors
+from pyspark.ml.feature import CountVectorizerModel
+
+def vectorize_concepts_epochs( LDA_arrayify_input_epochs, gen_vocabulary):
+    # read in the python list of the vocab
+    vocab_list = from_pickle(gen_vocabulary)
+
+    # fortunately it's possible to build a vectorizer from a pre-computed vocab list such as we have
+    # I'm also using binary = True to tell it that when counting occurrances we don't really need counts, just presence/absence (better for EHR data? you decide...)
+    cvmodel = CountVectorizerModel.from_vocabulary(vocab_list, inputCol = "concept_ids", outputCol = "concept_vector", binary = False) # maxDF already incorporated...(?)
+
+    # now we do the 'transform' (vectorization) and return it
+    transformed_data = cvmodel.transform(LDA_arrayify_input_epochs)
+
+    return transformed_data
+
+#################################################
+## Global imports and functions included below ##
+#################################################
+
+import pickle
+
+def to_pickle(data):
+    output = Transforms.get_output()
+    output_fs = output.filesystem()
+    
+    with output_fs.open('data.pickle', 'wb') as f: 
+        pickle.dump(data, f)
+
+def from_pickle(transform_input):
+    with transform_input.filesystem().open('data.pickle', 'rb') as f:    
+        data = pickle.load(f)
+
+    return data

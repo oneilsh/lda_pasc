@@ -1,0 +1,12 @@
+--* prep_epoch_model_input:
+--*   desc: Generate individual person-epochs for topic assignment from the model.
+--*   ext: sql
+--*   inputs:
+--*   - condition_era_with_epochs_epoch_analysis
+--* 
+
+SELECT 
+    concat(condition_era_with_epochs_epoch_analysis.person_id, ":", condition_era_with_epochs_epoch_analysis.epoch) as person_id,
+    condition_era_with_epochs_epoch_analysis.condition_concept_id as concept_id,
+    condition_era_with_epochs_epoch_analysis.data_partner_id
+FROM condition_era_with_epochs_epoch_analysis

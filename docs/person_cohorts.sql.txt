@@ -1,0 +1,24 @@
+--* person_cohorts:
+--*   desc: From the defined epochs (which also encode cohort), extract just the cohort
+--*     name, not included the 'all' cohort.
+--*   ext: sql
+--*   inputs:
+--*   - person_cohort_epoch_definitions
+--* 
+
+WITH cohort_all AS (
+    SELECT DISTINCT
+        person_id,
+        split(epoch_name, ':')[0] as cohort
+    FROM person_cohort_epoch_definitions
+    WHERE split(epoch_name, ':')[0] != 'all'
+)
+
+SELECT
+    person_id,
+    cohort,
+    CASE
+        WHEN cohort IN ('pasc-no-covid', 'covid-and-pasc', 'pasc-suspicious-covid') THEN 'pasc'
+        ELSE cohort
+    END as cohort_simple
+FROM cohort_all

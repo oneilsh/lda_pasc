@@ -1,0 +1,11 @@
+--* observation_lda_pin:
+--*   desc: Filters OMOP observation table by kept sites.
+--*   ext: sql
+--*   inputs:
+--*   - observation
+--*   - keep_sites
+--* 
+
+SELECT observation.*
+FROM observation
+INNER JOIN keep_sites ON keep_sites.data_partner_id = observation.data_partner_id

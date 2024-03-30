@@ -1,0 +1,39 @@
+#* person_topic_assignment_epochs:
+#*   desc: Assign topics to patient-epochs with the model.
+#*   ext: py
+#*   inputs:
+#*   - vectorize_concepts_epochs
+#*   - lda_model
+#* 
+
+# in this node we use the model's .transform() to take the original person data and 
+# assign each person to topics via the probabilistic model
+
+def person_topic_assignment_epochs(vectorize_concepts_epochs, lda_model):
+    lda_model_1 = lda_model
+    ldamodel = lda_model.stages[0].model
+
+    result = ldamodel.transform(vectorize_concepts_epochs)
+
+    # note that in the result concept_names and concept_vector are carried over from the input table
+    # what's new is the topicDistribution column which has type VectorUDT (as does the concept_vector column from the vectorizer)
+    return(result)
+
+#################################################
+## Global imports and functions included below ##
+#################################################
+
+import pickle
+
+def to_pickle(data):
+    output = Transforms.get_output()
+    output_fs = output.filesystem()
+    
+    with output_fs.open('data.pickle', 'wb') as f: 
+        pickle.dump(data, f)
+
+def from_pickle(transform_input):
+    with transform_input.filesystem().open('data.pickle', 'rb') as f:    
+        data = pickle.load(f)
+
+    return data

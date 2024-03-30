@@ -1,0 +1,25 @@
+#* topic_coherence_histogram:
+#*   desc: Plot a histogram of coherence scores across topics.
+#*   ext: R
+#*   inputs:
+#*   - coherence_by_topic
+#* 
+
+topic_coherence_histogram <- function(coherence_by_topic) {
+    library(ggplot2)
+    library(stringr)
+
+    p <- ggplot(coherence_by_topic) +
+         geom_histogram(aes(x = sum_coherence)) +
+         scale_x_continuous(name = "Topic Coherence") +
+         scale_y_continuous(name = "Number of Topics") +
+         theme_bw(16) +
+         theme(aspect.ratio = 0.5)
+
+    plot(p)
+
+    coherence_by_topic <- coherence_by_topic[str_order(coherence_by_topic$topic_name, numeric = TRUE), ]
+    coherence_by_topic$coherence_z_score <- (coherence_by_topic$sum_coherence - mean(coherence_by_topic$sum_coherence)) / sd(coherence_by_topic$sum_coherence)
+    return(coherence_by_topic)
+
+}
