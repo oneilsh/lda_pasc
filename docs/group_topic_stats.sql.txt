@@ -11,13 +11,14 @@ WITH gender_groups AS (
         cohort_simple,
         gender as group,
         'gender' as grouper,
+        epoch,
         AVG(topic_prob) as mean_topic_prob,
         kurtosis(topic_prob) as kurtosis_topic_prob,
         variance(topic_prob) as var_topic_prob,
         count(person_id) as count_patients
     FROM epoch_topic_stat_features
-    WHERE epoch = 'post'
     GROUP BY 
+        epoch,
         topic_name, 
         cohort_simple, 
         --life_stage_simple, 
@@ -31,13 +32,14 @@ life_stage_simple_groups AS (
         cohort_simple,
         life_stage_simple as group,
         'life_stage_simple' as grouper,
+        epoch,
         AVG(topic_prob) as mean_topic_prob,
         kurtosis(topic_prob) as kurtosis_topic_prob,
         variance(topic_prob) as var_topic_prob,
         count(person_id) as count_patients
     FROM epoch_topic_stat_features
-    WHERE epoch = 'post'
     GROUP BY 
+        epoch,
         topic_name, 
         cohort_simple, 
         life_stage_simple 
@@ -51,13 +53,14 @@ index_wave_groups AS (
         cohort_simple,
         index_wave as group,
         'index_wave' as grouper,
+        epoch,
         AVG(topic_prob) as mean_topic_prob,
         kurtosis(topic_prob) as kurtosis_topic_prob,
         variance(topic_prob) as var_topic_prob,
         count(person_id) as count_patients
     FROM epoch_topic_stat_features
-    WHERE epoch = 'post'
     GROUP BY 
+        epoch,
         topic_name, 
         cohort_simple, 
         --life_stage_simple, 

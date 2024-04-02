@@ -13,7 +13,13 @@ library(ggrepel)
 library(stringr)
 
 coherence_results_correlation <- function(model_tests_covid_pvals, coherence_by_topic, group_topic_stats) {
-    # This is all self-inflicted pain :/
+    # do a quick check of correlation between mean and variance across cohorts, groups, epochs, and topics - mean and variance are correlated but lets quantify it
+    print("Mean topic usage vs variance topic usage, across cohorts, groups, topics, epochs (post and pre), Spearman rank correlation:")
+    print(cor(group_topic_stats$mean_topic_prob, group_topic_stats$var_topic_prob, method = "spearman"))
+    print("Mean topic usage vs variance topic usage, across cohorts, groups, topics, epochs (post and pre), Pearson correlation:")
+    print(cor(group_topic_stats$mean_topic_prob, group_topic_stats$var_topic_prob, method = "pearson"))
+
+    # This is all self-inflicted pain due to my terrible naming conventions :/
     contrasts <- model_tests_covid_pvals %>%
         filter(!grepl("Overall", contrast)) %>% # keep only contrast tests
         extract(contrast,
@@ -37,6 +43,7 @@ coherence_results_correlation <- function(model_tests_covid_pvals, coherence_by_
         )) %>%
     
     merge(group_topic_stats %>%
+            filter(epoch == "post") %>%  # only post epoch for these visualizations
             mutate(group = case_when(
                 group == "MALE" ~ "male",
                 group == "FEMALE" ~ "female",
@@ -47,28 +54,19 @@ coherence_results_correlation <- function(model_tests_covid_pvals, coherence_by_
     mutate(plot_label = case_when(
         p_adj < 0.05 & (exp(estimate) > 2 | exp(estimate) < 0.5) ~ topic_name,
         TRUE ~ ""
+    )) %>%
+
+    mutate(group = case_when(
+        group == "adolescent" ~ "Adolescent",
+        group == "pediatric" ~ "Pediatric",
+        group == "adult" ~ "Adult",
+        group == "senior" ~ "Senior",
+        group == "early" ~ "Early",
+        group == "alpha" ~ "Alpha",
+        group == "delta" ~ "Delta",
+        group == "male" ~ "Male",
+        group == "female" ~ "Female",
     ))
-
-    # group_cohort_stats <- contrasts %>%
-    #     select(topic_name, plot_label, cohort_simple, group, grouper, mean_topic_prob, var_topic_prob, count_patients)
-    
-    # p <- ggplot(group_cohort_stats, 
-    #             aes(x = mean_topic_prob, 
-    #                 y = mean_topic_prob / var_topic_prob)) +
-    #     geom_point(aes(size = count_patients, 
-    #                    color = grouper)) + 
-    #     geom_text_repel(aes(label = plot_label),
-    #                     max.overlaps = Inf,
-    #                     min.segment.length = 0,
-    #                     box.padding = 2.5,
-    #                     size = 3.0,
-    #                     segment.color = "blue"
-    #                     ) +
-    #     facet_grid(group ~ cohort_simple) 
-
-    # plot(p)
-
-    # return(contrasts)
 
     control_data <- contrasts %>% filter(cohort_simple == "control") %>%
         select(group, topic_name, mean_topic_prob, var_topic_prob, count_patients) %>%
@@ -84,10 +82,6 @@ coherence_results_correlation <- function(model_tests_covid_pvals, coherence_by_
                    color = "#EE220C", fill = "#EE220C", alpha = 0.5, shape = 21, stroke = 0) +
         geom_point(aes(x = sum_coherence, y = estimate, size = control_mean_topic_prob),
                    color = "#0076BA", fill = "#0076BA", alpha = 0.5, shape = 21, stroke = 0) +
-        geom_point(aes(x = sum_coherence, y = estimate, size = mean_topic_prob + sqrt(var_topic_prob)),
-                   color = "#EE220C", fill = NA, alpha = 0.5, shape = 21, stroke = 0.2) +
-        geom_point(aes(x = sum_coherence, y = estimate, size = control_mean_topic_prob + sqrt(control_var_topic_prob)),
-                   color = "#0076BA", fill = NA, alpha = 0.5, shape = 21, stroke = 0.2) +
         geom_text_repel(aes(x = sum_coherence, y = estimate, label = plot_label),
                         max.overlaps = Inf,
                         min.segment.length = 0,
@@ -95,128 +89,33 @@ coherence_results_correlation <- function(model_tests_covid_pvals, coherence_by_
                         size = 3.0,
                         segment.color = "blue"
                         ) +
-        facet_wrap(~ group) #
-        # scale_size_continuous(range = c(0.4, 6), name = "Usage Mean", limits = meanrange) +
-        # scale_color_gradient(name = "Usage Variance", low = "dodgerblue1", high = "orange", limits = varrange) +
-        # scale_x_continuous(name = "Topic Coherence") +
-        # scale_y_continuous(name = "Contrast Effect Size", trans = "log10", limits = ylimits, breaks = ylabels, labels = ylabels) +
-        # annotation_logticks(sides = "l")
+        facet_wrap(~ group) +
+        ggtitle("Group Contrasts, PASC vs. Control") +
+        scale_size_continuous(name = "Group Topic Usage\nPost Phase\n(Red: PASC, Blue: Control)") +
+        scale_x_continuous(name = "Topic Coherence") +
+        scale_y_continuous(name = "Group Contrast Effect Size (Log-Odds)")
 
     plot(p)
 
-    return(full_data)
-
-    post_vars <- mean_vars_topic_probs %>%
-        select(-mean_topic_prob) %>%
-        filter(epoch == "post") %>%
-        pivot_wider(names_from = cohort_simple, values_from = var_topic_prob) %>% # one row per topic
-        merge(model_tests_covid_pvals %>% filter(grepl("Migration: ", contrast)), by = "topic_name") # N contrast rows per topic, control, pasc, covid-no-pasc stats repeated
-
-    ylimits = c(0.01, 100)
-    ylabels <- c(0.01, 0.1, 1, 10, 100)
-
-    # post_vars <- post_vars %>%
-    #     #mutate(plot_label = ifelse(grepl("(T-19 )|(T-23 )|(T-86 )|(T-137)|(T-8 )|(T-36 )|(T-72 )|(T-77 )", topic_name) & p_adj_small,
-    #     mutate(plot_label = ifelse(p_adj_small & (exp(estimate) > 2 | exp(estimate) < 0.5) | `covid-no-pasc` / `control` > 50,
-    #                                topic_name,
-    #                                ""
-    #                                )
-    #            )
-
-    # p <- ggplot(post_vars %>% filter(grepl("PASC+", contrast))) +
-    #     geom_point(aes(y = exp(estimate), x = pasc / `control`, color = p_adj_small)) +
-    #     geom_text_repel(aes(y = exp(estimate), x = pasc / `control`, label = plot_label),
-    #                     max.overlaps = Inf,
-    #                     min.segment.length = 0,
-    #                     box.padding = 2.5,
-    #                     size = 3.0,
-    #                     segment.color = "blue"
-    #                     ) +
-    #     geom_hline(yintercept = 1, style = "dashed") +
-    #     geom_vline(xintercept = 1, style = "dashed") +
-    #     facet_wrap(~ contrast) +
-    #     scale_x_continuous(trans = "log10", name = "PASC / Control Variance Ratio Post-Infection") +
-    #     scale_y_continuous(name = "Contrast Effect Size", trans = "log10", limits = ylimits, breaks = ylabels, labels = ylabels) +
-    #     annotation_logticks(sides = "bl")
-
-    # plot(p)
-
-    # p <- ggplot(post_vars %>% filter(grepl("COVID+", contrast))) +
-    #     geom_point(aes(y = exp(estimate), x = `covid-no-pasc` / `control`, color = p_adj_small)) +
-    #     geom_text_repel(aes(y = exp(estimate), x = `covid-no-pasc` / `control`, label = plot_label),
-    #                     max.overlaps = Inf,
-    #                     min.segment.length = 0,
-    #                     box.padding = 2.5,
-    #                     size = 3.0,
-    #                     segment.color = "blue"
-    #                     ) +
-    #     geom_hline(yintercept = 1, style = "dashed") +
-    #     geom_vline(xintercept = 1, style = "dashed") +
-    #     facet_wrap(~ contrast) +
-    #     scale_x_continuous(trans = "log10", name = "COVID / Control Variance Ratio Post-Infection") +
-    #     scale_y_continuous(name = "Contrast Effect Size", trans = "log10", limits = ylimits, breaks = ylabels, labels = ylabels) +
-    #     annotation_logticks(sides = "bl")
-
-    # plot(p)
-
-    df <- merge(model_tests_covid_pvals, coherence_by_topic, by = "topic_name") %>%
-        mutate(topic_name_plot = ifelse(p_adj_small, topic_name, "")) #%>%
-        #filter(!grepl("T-29\\d", topic_name))
-    
-    df_overall <- df %>% 
-        filter(grepl("^Overall", contrast)) %>%
-        filter(contrast != "Overall: Post Pre Mean") # this is not that informative, though does show an interesting trend that more coherence is related to rarer topics
-
-    df_contrasts <- df %>% 
-        filter(!grepl("^Overall", contrast)) %>%
-        mutate(contrast = str_replace(contrast, "Migration: ", "Contrast: ")) %>%
-        mutate(contrast = paste0(contrast, " (Post/Pre)")) %>%
-        merge(mean_vars_topic_probs %>% filter(epoch == "post")) %>%
-        mutate(plot_label = ifelse(p_adj_small & (exp(estimate) > 2 | exp(estimate) < 0.5),
-                                   topic_name,
-                                   ""
-                                   )) %>%
-        pivot_wider(names_from = cohort_simple, values_from = c(mean_topic_prob, var_topic_prob))
-
-    varrange = range(mean_vars_topic_probs$var_topic_prob)
-    meanrange = range(mean_vars_topic_probs$mean_topic_prob)
-        
-    p <- ggplot(df_contrasts %>% filter(grepl("PASC+", contrast))) +
-        ggtitle("Topic Coherence vs. Contrast Effect Size: PASC") +
-        geom_hline(yintercept = 1) +
-        geom_point(mapping = aes(x = sum_coherence, 
-                                 y = exp(estimate),
-                                 size = mean_topic_prob_pasc,
-                                 color = var_topic_prob_pasc
-                                 ),
-                   alpha = 0.5) +
-        geom_text_repel(aes(y = exp(estimate), x = sum_coherence, label = plot_label),
+    p <- ggplot(full_data %>% filter(cohort_simple == "covid-no-pasc")) +
+        geom_point(aes(x = sum_coherence, y = estimate, size = mean_topic_prob),
+                   color = "#EE220C", fill = "#EE220C", alpha = 0.5, shape = 21, stroke = 0) +
+        geom_point(aes(x = sum_coherence, y = estimate, size = control_mean_topic_prob),
+                   color = "#0076BA", fill = "#0076BA", alpha = 0.5, shape = 21, stroke = 0) +
+        geom_text_repel(aes(x = sum_coherence, y = estimate, label = plot_label),
                         max.overlaps = Inf,
                         min.segment.length = 0,
                         box.padding = 2.5,
                         size = 3.0,
                         segment.color = "blue"
                         ) +
-        facet_wrap(~ contrast) +
-        scale_size_continuous(range = c(0.4, 6), name = "Usage Mean", limits = meanrange) +
-        scale_color_gradient(name = "Usage Variance", low = "dodgerblue1", high = "orange", limits = varrange) +
+        facet_wrap(~ group) +
+        ggtitle("Group Contrasts, COVID vs. Control") +
+        scale_size_continuous(name = "Group Topic Usage\nPost Phase\n(Red: COVID, Blue: Control)") +
         scale_x_continuous(name = "Topic Coherence") +
-        scale_y_continuous(name = "Contrast Effect Size", trans = "log10", limits = ylimits, breaks = ylabels, labels = ylabels) +
-        annotation_logticks(sides = "l")
-    plot(p)
-
-    p <- ggplot() +
-        ggtitle("Topic Coherence vs. Contrast Effect Size: COVID") +
-        geom_point(data = df_contrasts %>% filter(grepl("COVID+", contrast)), 
-                   mapping = aes(x = sum_coherence, 
-                                 y = exp(estimate)
-                                 )) +
-        geom_hline(yintercept = 1) +
-        facet_wrap(~ contrast) +
-        scale_x_continuous(name = "Topic Coherence") +
-        scale_y_continuous(name = "Contrast Effect Size", trans = "log10", limits = ylimits, breaks = ylabels, labels = ylabels)
+        scale_y_continuous(name = "Group Contrast Effect Size (Log-Odds)")
 
     plot(p)
 
-    return(post_vars)
+    return(full_data)
 }
