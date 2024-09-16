@@ -1,4 +1,6 @@
 --* person_lda_pin:
+--*   attr:
+--*     fillcolor: '1'
 --*   desc: Filters OMOP person table by kept sites.
 --*   ext: sql
 --*   inputs:

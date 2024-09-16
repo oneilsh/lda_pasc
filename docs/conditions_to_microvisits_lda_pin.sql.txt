@@ -1,4 +1,6 @@
 --* conditions_to_microvisits_lda_pin:
+--*   attr:
+--*     fillcolor: '1'
 --*   desc: Filters conditions-to-visits table by kept sites.
 --*   ext: sql
 --*   inputs:

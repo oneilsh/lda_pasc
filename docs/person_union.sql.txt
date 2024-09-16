@@ -1,4 +1,6 @@
 --* person_union:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Aggregates all the different person_ids for whom we have some data on. Original
 --*     code by Emily Pfaff.
 --*   ext: sql

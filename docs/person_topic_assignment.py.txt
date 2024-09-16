@@ -1,4 +1,6 @@
 #* person_topic_assignment:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Assign full patient histories to topics.
 #*   ext: py
 #*   inputs:

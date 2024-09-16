@@ -1,4 +1,6 @@
 --* covid_tests:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Identifies PCR and Ag-positive test concepts. Original code by Emily Pfaff.
 --*   ext: sql
 --*   inputs:

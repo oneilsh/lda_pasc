@@ -1,4 +1,6 @@
 #* figure_5_plots:
+#*   attr:
+#*     fillcolor: '7'
 #*   desc: Select forest plots.
 #*   ext: R
 #*   inputs:

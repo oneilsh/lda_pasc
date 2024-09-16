@@ -1,4 +1,6 @@
 --* epoch_stats_long:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Generate metadata about each patient epoch.
 --*   ext: sql
 --*   inputs:

@@ -1,4 +1,6 @@
 --* concept_set_members_lda_pin:
+--*   attr:
+--*     fillcolor: '1'
 --*   desc: N3C concept set definitions table (not pinned to version at data release since
 --*     it is write-only).
 --*   ext: sql

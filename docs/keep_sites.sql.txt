@@ -1,4 +1,6 @@
 --* keep_sites:
+--*   attr:
+--*     fillcolor: '1'
 --*   desc: Identifies the sites passing quality checks
 --*   ext: sql
 --*   inputs:

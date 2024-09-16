@@ -1,4 +1,6 @@
 --* positive_words:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Identifies measurement concepts that indicate a positive lab result. Original
 --*     code by Emily Pfaff.
 --*   ext: sql

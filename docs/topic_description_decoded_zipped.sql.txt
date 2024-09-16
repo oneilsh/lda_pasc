@@ -1,4 +1,6 @@
 --* topic_description_decoded_zipped:
+--*   attr:
+--*     fillcolor: '3'
 --*   desc: More reformatting to get useful topic descriptions.
 --*   ext: sql
 --*   inputs:

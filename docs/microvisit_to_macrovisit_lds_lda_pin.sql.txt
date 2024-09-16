@@ -1,4 +1,6 @@
 --* microvisit_to_macrovisit_lds_lda_pin:
+--*   attr:
+--*     fillcolor: '1'
 --*   desc: Filters macrovisit information by kept sites.
 --*   ext: sql
 --*   inputs:

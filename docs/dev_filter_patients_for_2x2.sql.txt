@@ -1,4 +1,6 @@
 --* dev_filter_patients_for_2x2:
+--*   attr:
+--*     fillcolor: '7'
 --*   desc: Select patients to include for 2x2 tests (in test set, have minimal pre/post
 --*     data existence, valid life stage and cohort).
 --*   ext: sql

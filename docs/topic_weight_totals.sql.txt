@@ -1,4 +1,6 @@
 --* topic_weight_totals:
+--*   attr:
+--*     fillcolor: '3'
 --*   desc: For each topic and data partner ID, compute the total assigned weight across
 --*     patients (training and validation).
 --*   ext: sql

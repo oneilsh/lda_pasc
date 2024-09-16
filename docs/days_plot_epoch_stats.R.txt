@@ -1,4 +1,6 @@
 #* days_plot_epoch_stats:
+#*   attr:
+#*     fillcolor: '2'
 #*   desc: Summary visualization of pre vs post epoch lengths.
 #*   ext: R
 #*   inputs:

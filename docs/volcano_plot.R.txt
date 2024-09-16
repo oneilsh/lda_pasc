@@ -1,4 +1,6 @@
 #* volcano_plot:
+#*   attr:
+#*     fillcolor: '7'
 #*   desc: Volcano plot.
 #*   ext: R
 #*   inputs:

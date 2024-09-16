@@ -1,4 +1,6 @@
 --* OUTPUT_person_topic_assignment:
+--*   attr:
+--*     fillcolor: '3'
 --*   desc: Join nicer topic names to the person topic assignment information.
 --*   ext: sql
 --*   inputs:

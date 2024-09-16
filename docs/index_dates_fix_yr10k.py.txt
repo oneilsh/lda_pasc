@@ -1,4 +1,6 @@
 #* index_dates_fix_yr10k:
+#*   attr:
+#*     fillcolor: '2'
 #*   desc: There are still some strange dates to be cleaned up in the next step, but
 #*     to do so we can't have them be after the year 10000, so this fixes that.
 #*   ext: py

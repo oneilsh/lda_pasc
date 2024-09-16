@@ -1,4 +1,6 @@
 --* epoch_stats_wide:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Put the epoch metadata into a wide format with one row per patient and info
 --*     captured about pre, acute, and post epochs.
 --*   ext: sql

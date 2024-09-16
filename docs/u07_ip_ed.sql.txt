@@ -1,4 +1,6 @@
 --* u07_ip_ed:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Identifies the first date of a COVID diagnosis in an inpatient of emergency
 --*     department setting). Original code by Emily Pfaff.
 --*   ext: sql

@@ -1,4 +1,6 @@
 --* first_b94_etc:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Identifies the date of the first 'sequelae of infection disease' (B94.8 maps
 --*     to it and was the code used prior to Oct 1 2021).
 --*   ext: sql

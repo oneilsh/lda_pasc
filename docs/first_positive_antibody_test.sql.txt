@@ -1,4 +1,6 @@
 --* first_positive_antibody_test:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Identifies the date of first positive antibody test (used only to help define
 --*     the control cohort)).
 --*   ext: sql

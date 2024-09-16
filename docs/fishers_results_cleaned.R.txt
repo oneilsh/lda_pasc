@@ -1,4 +1,6 @@
 #* fishers_results_cleaned:
+#*   attr:
+#*     fillcolor: '7'
 #*   desc: Reshape 2x2 results to wide format for publication.
 #*   ext: R
 #*   inputs:

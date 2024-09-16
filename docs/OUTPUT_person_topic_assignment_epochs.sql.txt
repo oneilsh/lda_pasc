@@ -1,4 +1,6 @@
 --* OUTPUT_person_topic_assignment_epochs:
+--*   attr:
+--*     fillcolor: '4'
 --*   desc: Split person-epoch identifiers to person and epoch, pulling in cohort information
 --*     with it (for convenience IIRC) and giving proper topic names.
 --*   ext: sql

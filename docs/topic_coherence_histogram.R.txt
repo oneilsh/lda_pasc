@@ -1,4 +1,6 @@
 #* topic_coherence_histogram:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Plot a histogram of coherence scores across topics.
 #*   ext: R
 #*   inputs:

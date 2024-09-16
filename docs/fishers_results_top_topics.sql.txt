@@ -1,4 +1,6 @@
 --* fishers_results_top_topics:
+--*   attr:
+--*     fillcolor: '7'
 --*   desc: This just joins in, for each concept_id upstream, which topic it was most
 --*     relevant in (not used in current analysis).
 --*   ext: sql

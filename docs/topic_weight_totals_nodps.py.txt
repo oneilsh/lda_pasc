@@ -1,4 +1,6 @@
 #* topic_weight_totals_nodps:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Does nothing actually - holdover from previous code that masked site IDs at
 #*     this point.
 #*   ext: py

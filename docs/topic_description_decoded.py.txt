@@ -1,4 +1,6 @@
 #* topic_description_decoded:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Decode the topic descriptions from the internal representation to the concept_id
 #*     representation.
 #*   ext: py

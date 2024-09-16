@@ -1,4 +1,6 @@
 #* topic_correlations:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Compute pearson correlation and Jensen-Shannon divergence for topic pairs.
 #*   ext: R
 #*   inputs:

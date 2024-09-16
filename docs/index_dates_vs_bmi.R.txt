@@ -1,4 +1,6 @@
 #* index_dates_vs_bmi:
+#*   attr:
+#*     fillcolor: '2'
 #*   desc: Summary visualization patient index dates vs how many conditions they had
 #*     pre vs post.
 #*   ext: R

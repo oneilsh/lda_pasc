@@ -1,4 +1,6 @@
 #* topic_clouds_6:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Topic cloud plot.
 #*   ext: R
 #*   inputs:

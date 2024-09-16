@@ -1,4 +1,6 @@
 #* pre_post_conditions:
+#*   attr:
+#*     fillcolor: '2'
 #*   desc: Summary visualization of pre and post epochs.
 #*   ext: R
 #*   inputs:

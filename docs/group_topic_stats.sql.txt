@@ -1,4 +1,6 @@
 --* group_topic_stats:
+--*   attr:
+--*     fillcolor: '7'
 --*   desc: Compute per-topic, per-analysis group statistics of topic probability.
 --*   ext: sql
 --*   inputs:

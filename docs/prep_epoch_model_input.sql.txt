@@ -1,4 +1,6 @@
 --* prep_epoch_model_input:
+--*   attr:
+--*     fillcolor: '4'
 --*   desc: Generate individual person-epochs for topic assignment from the model.
 --*   ext: sql
 --*   inputs:

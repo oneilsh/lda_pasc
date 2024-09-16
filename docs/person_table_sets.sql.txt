@@ -1,4 +1,6 @@
 --* person_table_sets:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Assignes patient IDs to train, validate, and test sets pseudorandomly.
 --*   ext: sql
 --*   inputs:

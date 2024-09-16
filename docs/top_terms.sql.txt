@@ -1,4 +1,6 @@
 --* top_terms:
+--*   attr:
+--*     fillcolor: '7'
 --*   desc: Select the top N terms per topic amongst those with positive relevance.
 --*   ext: sql
 --*   inputs:

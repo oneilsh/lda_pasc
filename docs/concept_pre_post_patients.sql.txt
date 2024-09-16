@@ -1,4 +1,6 @@
 --* concept_pre_post_patients:
+--*   attr:
+--*     fillcolor: '7'
 --*   desc: "Defines counts for downstream 2x2 tests. For each concept (for each cohort\
 --*     \ and life stage, which can be summarized over later), \ncounts the number of\
 --*     \ patients who have that concept (one or more entries) in pre but not post, post\

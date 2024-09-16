@@ -1,4 +1,6 @@
 --* coherence_by_dp_topic:
+--*   attr:
+--*     fillcolor: '3'
 --*   desc: Compute topic coherence scores broken out by data partner.
 --*   ext: sql
 --*   inputs:

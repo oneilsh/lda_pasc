@@ -1,4 +1,6 @@
 #* datapartner_topic_usage_entropy:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: For each topic, computes the entropy of that topic from the distribution of
 #*     usage over sites, normalized to 1.0 being max entropy (uniform) and 0.0 being
 #*     min entropy (used only by one site).

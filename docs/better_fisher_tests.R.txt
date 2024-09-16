@@ -1,4 +1,6 @@
 #* better_fisher_tests:
+#*   attr:
+#*     fillcolor: '7'
 #*   desc: "Runs a 2x2 (two sided fishers with simulate.p.value = T) for each concept,\
 #*     \ \nwith patient counts summed across life stages, evaluating new onset rates\
 #*     \ in each test cohort\n(covid-no-pasc and pasc) against controls. \n"

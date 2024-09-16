@@ -1,4 +1,6 @@
 #* vectorize_concepts:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Now take the input arrays of concept_ids and use the vocabulary to generate
 #*     count data (for training and validation patients).
 #*   ext: py

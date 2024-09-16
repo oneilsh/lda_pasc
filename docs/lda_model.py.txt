@@ -1,4 +1,6 @@
 #* lda_model:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Train the model! Don't use the hold_out (validation) data.
 #*   ext: py
 #*   inputs:

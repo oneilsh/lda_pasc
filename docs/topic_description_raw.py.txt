@@ -1,4 +1,6 @@
 #* topic_description_raw:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Extract descriptions of topics from the model as probability distributions
 #*     over all terms.
 #*   ext: py

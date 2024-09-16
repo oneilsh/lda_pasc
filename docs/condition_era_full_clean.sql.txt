@@ -1,4 +1,6 @@
 --* condition_era_full_clean:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Drops condition eras matching the excluded concept_ids, and those with the
 --*     end date before the start date.
 --*   ext: sql

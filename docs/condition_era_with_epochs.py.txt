@@ -1,4 +1,6 @@
 #* condition_era_with_epochs:
+#*   attr:
+#*     fillcolor: '2'
 #*   desc: Assigned condition eras to epochs, removing any conditions that overlap the
 #*     epochs defined as suspicious (prior to 2018-1-1 or after most reasonable date).
 #*   ext: py

@@ -1,4 +1,6 @@
 --* lab_pos:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Identifies the first date of any PCR/Ag lab positive result. Original code
 --*     by Emily Pfaff.
 --*   ext: sql

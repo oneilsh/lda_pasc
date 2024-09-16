@@ -1,4 +1,6 @@
 #* masked_topic_weight_totals_nodps:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Psuedorandomly mask site IDs in topic weight totals to match other psuedorandom
 #*     IDs.
 #*   ext: py

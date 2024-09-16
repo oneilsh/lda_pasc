@@ -1,4 +1,6 @@
 --* ed_concepts:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Identifies Emergency Department visit concepts. Original code by Emily Pfaff.
 --*   ext: sql
 --*   inputs:

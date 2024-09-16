@@ -1,4 +1,6 @@
 #* masked_data_partner_cdms:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Psuedorandomly mask site IDs in the manifest table to match other psuedorandom
 #*     IDs so we can associate their common data model info.
 #*   ext: py

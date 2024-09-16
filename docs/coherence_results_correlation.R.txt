@@ -1,4 +1,6 @@
 #* coherence_results_correlation:
+#*   attr:
+#*     fillcolor: '7'
 #*   desc: Topic visualizations - coherence, statistical significance in test groups,
 #*     mean and variance usage in test groups, etc.
 #*   ext: R

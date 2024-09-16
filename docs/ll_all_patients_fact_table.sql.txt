@@ -1,4 +1,6 @@
 --* ll_all_patients_fact_table:
+--*   attr:
+--*     fillcolor: '1'
 --*   desc: Filters basic patient facts information by kept sites.
 --*   ext: sql
 --*   inputs:

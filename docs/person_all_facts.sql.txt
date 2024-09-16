@@ -1,4 +1,6 @@
 --* person_all_facts:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Aggregate lots of useful facts about patients. This also defines patients'
 --*     life stage, index wave, and race and ethnicity categorization.
 --*   ext: sql

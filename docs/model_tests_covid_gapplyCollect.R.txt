@@ -1,4 +1,6 @@
 #* model_tests_covid_gapplyCollect:
+#*   attr:
+#*     fillcolor: '7'
 #*   desc: 'The big one: running the logistic regression tests and estimated marginal
 #*     means.
 #* 

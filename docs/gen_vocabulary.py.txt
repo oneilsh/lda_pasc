@@ -1,4 +1,6 @@
 #* gen_vocabulary:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Generate the vocabulary over all the data covering all used concept_ids, for
 #*     later use in model training and usage.
 #*   ext: py

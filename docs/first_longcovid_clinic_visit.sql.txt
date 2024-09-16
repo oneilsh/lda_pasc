@@ -1,4 +1,6 @@
 --* first_longcovid_clinic_visit:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Identifies the date of the first long covid clinic visit.
 --*   ext: sql
 --*   inputs:

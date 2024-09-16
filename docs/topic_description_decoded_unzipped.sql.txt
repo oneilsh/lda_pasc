@@ -1,4 +1,6 @@
 --* topic_description_decoded_unzipped:
+--*   attr:
+--*     fillcolor: '3'
 --*   desc: Join nicer topic names to the topic descriptions.
 --*   ext: sql
 --*   inputs:

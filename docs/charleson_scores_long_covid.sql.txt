@@ -1,4 +1,6 @@
 --* charleson_scores_long_covid:
+--*   attr:
+--*     fillcolor: '1'
 --*   desc: Filters charleson score information by kept sites.
 --*   ext: sql
 --*   inputs:

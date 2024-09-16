@@ -1,4 +1,6 @@
 #* jensen_shannon:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Plot jensen-shannon heatmap.
 #*   ext: R
 #*   inputs:

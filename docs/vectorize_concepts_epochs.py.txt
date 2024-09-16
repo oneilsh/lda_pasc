@@ -1,4 +1,6 @@
 #* vectorize_concepts_epochs:
+#*   attr:
+#*     fillcolor: '4'
 #*   desc: Shaping for model prediction.
 #*   ext: py
 #*   inputs:

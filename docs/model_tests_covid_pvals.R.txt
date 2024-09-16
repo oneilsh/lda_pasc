@@ -1,4 +1,6 @@
 #* model_tests_covid_pvals:
+#*   attr:
+#*     fillcolor: '7'
 #*   desc: Runs multiple test correction on all the model results. For models that diverged,
 #*     resulting in nonsense odds ratio estimates, the p-values are replaced by NA prior
 #*     to correction.

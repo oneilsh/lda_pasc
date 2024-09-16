@@ -1,4 +1,6 @@
 #* person_topic_assignment_epochs:
+#*   attr:
+#*     fillcolor: '4'
 #*   desc: Assign topics to patient-epochs with the model.
 #*   ext: py
 #*   inputs:

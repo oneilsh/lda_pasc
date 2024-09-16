@@ -1,4 +1,6 @@
 --* cohort_and_idx2:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Aggregates the various index dates per person. Original code by Emily Pfaff.
 --*   ext: sql
 --*   inputs:

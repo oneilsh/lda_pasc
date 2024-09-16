@@ -1,4 +1,6 @@
 --* all_person_facts_epoch_analysis:
+--*   attr:
+--*     fillcolor: '4'
 --*   desc: Select only patients in the validate and test datasets and in a valid cohort
 --*     (validate/test selection made later for different uses).
 --*   ext: sql

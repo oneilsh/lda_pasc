@@ -1,4 +1,6 @@
 --* concept_lda_pin:
+--*   attr:
+--*     fillcolor: '1'
 --*   desc: OMOP concept table (pinned to version at data release).
 --*   ext: sql
 --*   inputs:

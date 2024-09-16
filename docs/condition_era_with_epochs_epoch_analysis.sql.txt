@@ -1,4 +1,6 @@
 --* condition_era_with_epochs_epoch_analysis:
+--*   attr:
+--*     fillcolor: '4'
 --*   desc: Select only the epoched conditions that are associated with validate or train
 --*     patients.
 --*   ext: sql

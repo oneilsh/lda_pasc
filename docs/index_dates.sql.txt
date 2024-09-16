@@ -1,4 +1,6 @@
 --* index_dates:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Join all the various dates into a single table with a row per patient for
 --*     all patients.
 --*   ext: sql

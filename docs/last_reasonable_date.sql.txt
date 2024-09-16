@@ -1,4 +1,6 @@
 --* last_reasonable_date:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Computes a last reasonable date for a given data partner, with some logic
 --*     for strange cases. See comments.
 --*   ext: sql

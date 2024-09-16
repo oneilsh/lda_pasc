@@ -1,4 +1,6 @@
 --* LDA_arrayify_input_epochs:
+--*   attr:
+--*     fillcolor: '4'
 --*   desc: Shaping for model prediction.
 --*   ext: sql
 --*   inputs:

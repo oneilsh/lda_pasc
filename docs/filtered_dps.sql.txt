@@ -1,4 +1,6 @@
 --* filtered_dps:
+--*   attr:
+--*     fillcolor: '7'
 --*   desc: Compute count of U09.9 usage at each site
 --*   ext: sql
 --*   inputs:

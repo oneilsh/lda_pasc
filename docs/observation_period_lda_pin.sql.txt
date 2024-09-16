@@ -1,4 +1,6 @@
 --* observation_period_lda_pin:
+--*   attr:
+--*     fillcolor: '1'
 --*   desc: Filters OMOP observation_period table by kept sites.
 --*   ext: sql
 --*   inputs:

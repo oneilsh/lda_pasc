@@ -1,4 +1,6 @@
 --* person_topics_arrayify_long_epochs:
+--*   attr:
+--*     fillcolor: '4'
 --*   desc: Shape model output of topic predictions for patient-epochs for use.
 --*   ext: sql
 --*   inputs:

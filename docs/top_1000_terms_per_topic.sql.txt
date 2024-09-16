@@ -1,4 +1,6 @@
 --* top_1000_terms_per_topic:
+--*   attr:
+--*     fillcolor: '3'
 --*   desc: For data i/o performance select the top 1000 terms per topic by weight for
 --*     plotting.
 --*   ext: sql

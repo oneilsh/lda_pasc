@@ -1,4 +1,6 @@
 --* u099:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Identifies the first date of a PASC diagnosis per patient.
 --*   ext: sql
 --*   inputs:

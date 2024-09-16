@@ -1,4 +1,6 @@
 --* u07_any:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Identifies the first date of any COVID-19 diagnosis.
 --*   ext: sql
 --*   inputs:

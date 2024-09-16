@@ -1,4 +1,6 @@
 #* topic_clouds_8:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Topic cloud plot. Note that this overlaps with topics from cloud 7 to get
 #*     the panel sizes the same.
 #*   ext: R

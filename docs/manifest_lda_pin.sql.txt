@@ -1,4 +1,6 @@
 --* manifest_lda_pin:
+--*   attr:
+--*     fillcolor: '1'
 --*   desc: Filters data partner manifest table by kept sites.
 --*   ext: sql
 --*   inputs:

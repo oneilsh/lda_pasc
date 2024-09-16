@@ -1,4 +1,6 @@
 --* median_condition_history:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: From the set of cleaned conditions, defines a median date as the middle of
 --*     their first / last conditions (not used in current analysis).
 --*   ext: sql

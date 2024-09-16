@@ -1,4 +1,6 @@
 #* person_cohort_epoch_definitions:
+#*   attr:
+#*     fillcolor: '2'
 #*   desc: Uses dates to define patient epochs (aka phases) of their history. Lots of
 #*     important logic here!
 #*   ext: py

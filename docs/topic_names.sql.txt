@@ -1,4 +1,6 @@
 --* topic_names:
+--*   attr:
+--*     fillcolor: '3'
 --*   desc: Create basic topic names by computing for each topic the percent usage by
 --*     probability mass in the data (training and validation).
 --*   ext: sql

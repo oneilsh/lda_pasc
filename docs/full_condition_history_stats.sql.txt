@@ -1,4 +1,6 @@
 --* full_condition_history_stats:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: For each patient defines metadata about their total condition history.
 --*   ext: sql
 --*   inputs:

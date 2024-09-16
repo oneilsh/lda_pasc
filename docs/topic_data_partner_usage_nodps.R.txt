@@ -1,4 +1,6 @@
 #* topic_data_partner_usage_nodps:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Plot relative topic usage across data partners with masked site IDs.
 #*   ext: R
 #*   inputs:

@@ -1,4 +1,6 @@
 --* exclude_concepts:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Defines the set of concept_ids to exclude from the data; a few specific ones,
 --*     and anything not in the condition domain.
 --*   ext: sql

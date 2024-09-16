@@ -1,4 +1,6 @@
 --* LDA_arrayify_input:
+--*   attr:
+--*     fillcolor: '3'
 --*   desc: Shapes data into arrays of concept_ids for model training.
 --*   ext: sql
 --*   inputs:

@@ -1,4 +1,6 @@
 --* epoch_topic_stat_features:
+--*   attr:
+--*     fillcolor: '7'
 --*   desc: Select patients to include for regression tests (in test set, have minimal
 --*     pre/post data existence, valid life stage and cohort, and complete demographic/health
 --*     data). Also filters out data from omicron patients.

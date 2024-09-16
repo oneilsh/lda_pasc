@@ -1,4 +1,6 @@
 --* coherence_by_topic:
+--*   attr:
+--*     fillcolor: '3'
 --*   desc: Compute topic coherence scores (ignoring data partner).
 --*   ext: sql
 --*   inputs:

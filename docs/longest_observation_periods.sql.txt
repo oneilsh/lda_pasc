@@ -1,4 +1,6 @@
 --* longest_observation_periods:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: For each patient, identifies the length in days (and start/end date) of the
 --*     longest observation period.
 --*   ext: sql

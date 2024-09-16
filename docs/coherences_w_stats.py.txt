@@ -1,4 +1,6 @@
 #* coherences_w_stats:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Compute term occurrence counts (individual and together in patients for pairs
 #*     of terms in the top N per topic) needed for coherence calculations by data partner
 #*     ID and topic.

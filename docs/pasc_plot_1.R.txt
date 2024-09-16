@@ -1,4 +1,6 @@
 #* pasc_plot_1:
+#*   attr:
+#*     fillcolor: '7'
 #*   desc: Contrast plot.
 #*   ext: R
 #*   inputs:

@@ -1,4 +1,6 @@
 --* person_cohorts:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: From the defined epochs (which also encode cohort), extract just the cohort
 --*     name, not included the 'all' cohort.
 --*   ext: sql

@@ -1,4 +1,6 @@
 #* index_dates_vs_age:
+#*   attr:
+#*     fillcolor: '2'
 #*   desc: Summary visualization patient index dates vs their age.
 #*   ext: R
 #*   inputs:

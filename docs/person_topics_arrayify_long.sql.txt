@@ -1,4 +1,6 @@
 --* person_topics_arrayify_long:
+--*   attr:
+--*     fillcolor: '3'
 --*   desc: Reshape person/topic assignment output.
 --*   ext: sql
 --*   inputs:

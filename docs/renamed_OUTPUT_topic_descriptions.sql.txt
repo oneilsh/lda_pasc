@@ -1,4 +1,6 @@
 --* renamed_OUTPUT_topic_descriptions:
+--*   attr:
+--*     fillcolor: '3'
 --*   desc: We want to plot word clouds for topics; replace the basic topic names with
 --*     the fancier ones for these.
 --*   ext: sql

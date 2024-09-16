@@ -1,4 +1,6 @@
 #* masked_coherence_by_dp_topic:
+#*   attr:
+#*     fillcolor: '3'
 #*   desc: Psuedorandomly mask site IDs in site topic coherence scores to match other
 #*     psuedorandom IDs.
 #*   ext: py

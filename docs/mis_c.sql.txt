@@ -1,4 +1,6 @@
 --* mis_c:
+--*   attr:
+--*     fillcolor: '2'
 --*   desc: Identifies the first date of a MIS-C diagnosis per patient (not used in current
 --*     analysis). Original code by Emily Pfaff.
 --*   ext: sql

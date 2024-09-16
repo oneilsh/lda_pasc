@@ -1,4 +1,6 @@
 --* measurement_lda_pin:
+--*   attr:
+--*     fillcolor: '1'
 --*   desc: Filters OMOP measurement table by kept sites.
 --*   ext: sql
 --*   inputs:

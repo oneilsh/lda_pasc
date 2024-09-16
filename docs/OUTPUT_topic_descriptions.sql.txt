@@ -1,4 +1,6 @@
 --* OUTPUT_topic_descriptions:
+--*   attr:
+--*     fillcolor: '3'
 --*   desc: Join nicer topic names to the topic descriptions. Additionally compute relevance
 --*     metric for each term/topic pair and join in concept metadata.
 --*   ext: sql
