@@ -10,3 +10,5 @@ Browse the code and descriptions at [https://oneilsh.github.io/lda_pasc/](https:
 - Red: Assignment of assessment patient clinical phases to topics
 - Green: Statistical analyses and results visualization
 
+Topic/term weights are available on [Hugging Face](https://huggingface.co/datasets/oneilsh/lda_pasc).
+
